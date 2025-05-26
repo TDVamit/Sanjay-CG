@@ -44,7 +44,33 @@ const jobToPdfMap: Record<string, string> = {
   "QA": "qa.pdf",
   "Software Architect": "software-architect.pdf",
   "Technical Writer": "technical-writer.pdf",
-  "UX Design": "ux-design.pdf"
+  "UX Design": "ux-design.pdf",
+  // Additional variations that might come from OpenAI
+  "Full Stack": "full-stack.pdf",
+  "DevOps": "devops.pdf",
+  "AI & Data Scientist": "mlops.pdf",
+  "Data Scientist": "mlops.pdf",
+  "Frontend Developer": "frontend.pdf",
+  "Backend Developer": "backend.pdf",
+  "Android Developer": "android.pdf",
+  "iOS Developer": "ios.pdf",
+  "Game Development": "game-developer.pdf",
+  "UX Designer": "ux-design.pdf",
+  "UI/UX Designer": "ux-design.pdf",
+  "Quality Assurance": "qa.pdf",
+  "Software Engineer": "full-stack.pdf",
+  "Web Developer": "full-stack.pdf",
+  "Mobile Developer": "android.pdf",
+  "Database Administrator": "postgresql-dba.pdf",
+  "DBA": "postgresql-dba.pdf",
+  "Security Engineer": "cyber-security.pdf",
+  "Cybersecurity": "cyber-security.pdf",
+  "Machine Learning Engineer": "mlops.pdf",
+  "ML Engineer": "mlops.pdf",
+  "Data Engineer": "data-analyst.pdf",
+  "Technical Writing": "technical-writer.pdf",
+  "Developer Advocate": "devrel.pdf",
+  "Dev Rel": "devrel.pdf"
 };
 
 function App() {
@@ -165,10 +191,41 @@ function App() {
   
   // Handle job card click to open PDF
   const handleJobClick = (jobName: string) => {
-    const pdfFileName = jobToPdfMap[jobName];
+
+    
+    // Try exact match first
+    let pdfFileName = jobToPdfMap[jobName];
+    
+    // If no exact match, try case-insensitive and trimmed match
+    if (!pdfFileName) {
+      const normalizedJobName = jobName.trim();
+      const matchingKey = Object.keys(jobToPdfMap).find(key => 
+        key.toLowerCase() === normalizedJobName.toLowerCase()
+      );
+      if (matchingKey) {
+        pdfFileName = jobToPdfMap[matchingKey];
+      }
+    }
+    
+    // If still no match, try partial matching
+    if (!pdfFileName) {
+      const normalizedJobName = jobName.trim().toLowerCase();
+      const matchingKey = Object.keys(jobToPdfMap).find(key => 
+        key.toLowerCase().includes(normalizedJobName) || 
+        normalizedJobName.includes(key.toLowerCase())
+      );
+      if (matchingKey) {
+        pdfFileName = jobToPdfMap[matchingKey];
+      }
+    }
+    
+    
     if (pdfFileName) {
       const pdfUrl = `/pdfs/${pdfFileName}`;
       setSelectedPdf({ url: pdfUrl, jobName });
+    } else {
+      console.error('No PDF found for job:', jobName);
+      alert(`PDF not found for "${jobName}". Please check if the job name matches our available guides.`);
     }
   };
   
@@ -213,7 +270,6 @@ ${formattedQuestions}
 
 Based on my responses, please provide comprehensive career guidance, suggesting specific CS career paths that match my interests, skills, and goals. Include advice on skills to develop, courses to take, and potential career trajectories.`;
       
-      console.log(prompt);
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
