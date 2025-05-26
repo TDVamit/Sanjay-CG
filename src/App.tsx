@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import axios from 'axios';
+import PDFViewer from './components/PDFViewer';
 
 // Define types for our form
 type Question = {
@@ -21,11 +22,37 @@ type JobResponse = {
   job4: JobRecommendation;
 };
 
+// Job to PDF mapping
+const jobToPdfMap: Record<string, string> = {
+  "AI Engineer": "ai-engineer.pdf",
+  "AI and Data Scientist": "mlops.pdf",
+  "Android": "android.pdf",
+  "Backend": "backend.pdf",
+  "Blockchain": "blockchain.pdf",
+  "Cyber Security": "cyber-security.pdf",
+  "Data Analyst": "data-analyst.pdf",
+  "Developer Relations": "devrel.pdf",
+  "Devops": "devops.pdf",
+  "Engineering Manager": "engineering-manager.pdf",
+  "Frontend": "frontend.pdf",
+  "Full-Stack": "full-stack.pdf",
+  "Game Developer": "game-developer.pdf",
+  "iOS": "ios.pdf",
+  "MLOps": "mlops.pdf",
+  "PostgreSQL": "postgresql-dba.pdf",
+  "Product Manager": "product-manager.pdf",
+  "QA": "qa.pdf",
+  "Software Architect": "software-architect.pdf",
+  "Technical Writer": "technical-writer.pdf",
+  "UX Design": "ux-design.pdf"
+};
+
 function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [aiResponse, setAiResponse] = useState<JobResponse | null>(null);
   const [validationErrors, setValidationErrors] = useState<number[]>([]);
+  const [selectedPdf, setSelectedPdf] = useState<{ url: string; jobName: string } | null>(null);
   const firstErrorRef = useRef<HTMLTextAreaElement>(null);
   
   // Group questions by category
@@ -136,6 +163,20 @@ function App() {
     }
   };
   
+  // Handle job card click to open PDF
+  const handleJobClick = (jobName: string) => {
+    const pdfFileName = jobToPdfMap[jobName];
+    if (pdfFileName) {
+      const pdfUrl = `/pdfs/${pdfFileName}`;
+      setSelectedPdf({ url: pdfUrl, jobName });
+    }
+  };
+  
+  // Close PDF viewer
+  const closePdfViewer = () => {
+    setSelectedPdf(null);
+  };
+  
   // Submit answers to OpenAI
   const submitToOpenAI = async () => {
     // Validate all questions before submitting
@@ -225,6 +266,7 @@ Based on my responses, please provide comprehensive career guidance, suggesting 
     setCurrentStep(1);
     setAiResponse(null);
     setValidationErrors([]);
+    setSelectedPdf(null);
   };
   
   // Render response or form based on state
@@ -256,15 +298,26 @@ Based on my responses, please provide comprehensive career guidance, suggesting 
                 {Object.entries(aiResponse).map(([key, job], index) => (
                   <div 
                     key={key} 
-                    className="bg-black rounded-2xl p-6 border border-gray-700 shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] transition-all duration-300"
+                    onClick={() => handleJobClick(job.name)}
+                    className="bg-black rounded-2xl p-6 border border-gray-700 shadow-[0_0_20px_rgba(0,255,255,0.2)] hover:shadow-[0_0_30px_rgba(0,255,255,0.4)] transition-all duration-300 cursor-pointer group"
                   >
                     <div className="flex items-center mb-4">
                       <div className="w-8 h-8 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full flex items-center justify-center mr-3">
                         <span className="text-black font-bold text-sm">{index + 1}</span>
                       </div>
-                      <h3 className="text-xl font-bold text-white">{job.name}</h3>
+                      <h3 className="text-xl font-bold text-white group-hover:text-cyan-400 transition-colors duration-200">{job.name}</h3>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-auto text-gray-400 group-hover:text-cyan-400 transition-colors duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
                     </div>
-                    <p className="text-gray-300 leading-relaxed">{job.description}</p>
+                    <p className="text-gray-300 leading-relaxed mb-3">{job.description}</p>
+                    <div className="flex items-center text-sm text-cyan-400 group-hover:text-cyan-300 transition-colors duration-200">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Click to view career guide
+                    </div>
                   </div>
                 ))}
               </div>
@@ -442,6 +495,15 @@ Based on my responses, please provide comprehensive career guidance, suggesting 
           <p>Your responses are analyzed by AI to provide personalized career guidance</p>
         </div>
       </div>
+      
+      {/* PDF Viewer Modal */}
+      {selectedPdf && (
+        <PDFViewer
+          pdfUrl={selectedPdf.url}
+          jobName={selectedPdf.jobName}
+          onClose={closePdfViewer}
+        />
+      )}
     </div>
   );
 }
