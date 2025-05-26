@@ -1,6 +1,6 @@
 {
   "framework": "vite",
-  "buildCommand": "chmod +x build.sh && ./build.sh",
+  "buildCommand": "npm run build:original",
   "outputDirectory": "dist",
   "installCommand": "npm install --legacy-peer-deps",
   "env": {
