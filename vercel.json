@@ -8,11 +8,6 @@
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "ROLLUP_NO_NATIVE": "true"
   },
-  "functions": {
-    "app/api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
