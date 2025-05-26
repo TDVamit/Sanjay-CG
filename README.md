@@ -17,7 +17,7 @@ A Computer Science Career Counseling application built with React, TypeScript, a
 - **Build Tool**: Vite 6
 - **PDF Viewer**: @react-pdf-viewer
 - **AI Integration**: OpenAI GPT-4o
-- **Deployment**: Vercel with GitHub Actions CI/CD
+- **Deployment**: Vercel with automated CI/CD
 
 ## 📦 Installation
 
@@ -36,37 +36,36 @@ npm run dev
 ## 🔧 Build Scripts
 
 - `npm run dev` - Start development server
-- `npm run build` - Build using custom script (recommended)
+- `npm run build` - Build using Vercel-optimized script (recommended)
+- `npm run build:custom` - Build using custom script with environment detection
 - `npm run build:original` - Standard TypeScript + Vite build
-- `npm run build:fallback` - Fallback build for CI/CD environments
 - `npm run preview` - Preview production build locally
 
 ## 🚀 Deployment
 
-### Vercel Deployment
+### Vercel Deployment (Automatic)
 
-The project is configured for automatic deployment to Vercel with the following setup:
+The project is configured for automatic deployment to Vercel with multiple fallback strategies to handle the Rollup dependency issue:
 
-#### 1. Vercel Configuration (`vercel.json`)
+#### Build Strategies:
+1. **Shell Script** (`build.sh`) - Primary build method for Vercel
+2. **Node.js Script** (`scripts/vercel-build.js`) - Fallback build method
+3. **Package.json Script** - Direct npm build command
+
+#### Vercel Configuration (`vercel.json`)
 ```json
 {
   "framework": "vite",
-  "buildCommand": "npm run build:fallback",
+  "buildCommand": "chmod +x build.sh && ./build.sh",
   "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps"
+  "installCommand": "npm install --legacy-peer-deps",
+  "env": {
+    "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "ROLLUP_NO_NATIVE": "true"
+  }
 }
 ```
-
-#### 2. GitHub Actions CI/CD (`.github/workflows/deploy.yml`)
-- Automatic deployment on push to `main` branch
-- Handles Rollup dependency issues
-- Uses Node.js 18 with npm caching
-
-#### 3. Environment Variables
-Set these in your Vercel dashboard:
-- `VERCEL_TOKEN` - Your Vercel API token
-- `ORG_ID` - Your Vercel organization ID
-- `PROJECT_ID` - Your Vercel project ID
 
 ### Manual Deployment
 
@@ -85,14 +84,16 @@ npm run deploy
 - `vite.config.ts` - Vite build configuration
 - `vercel.json` - Vercel deployment settings
 - `package.json` - Dependencies and build scripts
+- `build.sh` - Shell script for Vercel builds
 
 ### Rollup Issue Resolution:
-The project includes multiple strategies to handle Rollup dependency issues on different platforms:
+The project includes multiple strategies to handle Rollup dependency issues:
 
-1. **Custom Build Script** (`scripts/build.js`) - Handles CI environments
-2. **Fallback Build** - Cross-platform compatible build command
-3. **Dependency Resolutions** - Forces specific Rollup versions
-4. **Environment Variables** - Configures npm behavior
+1. **Shell Script Build** (`build.sh`) - Simple bash script for Linux environments
+2. **Node.js Build Script** (`scripts/vercel-build.js`) - Cross-platform Node.js script
+3. **Dependency Overrides** - Forces compatible Rollup versions
+4. **Environment Variables** - Configures npm and Node.js behavior
+5. **Multiple Fallbacks** - If one method fails, others are available
 
 ## 📁 Project Structure
 
@@ -107,10 +108,9 @@ sanjay-cg/
 │   ├── assets/
 │   └── App.tsx
 ├── scripts/
-│   └── build.js           # Custom build script
-├── .github/
-│   └── workflows/
-│       └── deploy.yml     # GitHub Actions workflow
+│   ├── build.js           # Custom build script
+│   └── vercel-build.js    # Vercel-specific build script
+├── build.sh               # Shell script for Vercel
 ├── vercel.json            # Vercel configuration
 ├── vite.config.ts         # Vite configuration
 └── package.json
@@ -140,8 +140,9 @@ The application provides PDF guides for 21 different career paths:
 ### Common Issues:
 
 1. **Rollup Build Errors on Vercel**
-   - Solution: Use `npm run build:fallback` command
    - The project includes multiple fallback strategies
+   - Vercel uses the shell script (`build.sh`) as primary build method
+   - If shell script fails, it falls back to Node.js script
 
 2. **PDF Viewer Not Loading**
    - Ensure PDFs are in the `public/pdfs/` directory
@@ -151,12 +152,16 @@ The application provides PDF guides for 21 different career paths:
    - Run `npx tsc --noEmit` to check for errors
    - Ensure all dependencies are properly installed
 
+4. **Local Development Issues**
+   - Use `npm install --legacy-peer-deps` for installation
+   - Use `npm run build:original` for standard builds
+
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test the build process
+4. Test the build process with `npm run build`
 5. Submit a pull request
 
 ## 📄 License

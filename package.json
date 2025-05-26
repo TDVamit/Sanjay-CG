@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build.js",
+    "build": "node scripts/vercel-build.js",
+    "build:custom": "node scripts/build.js",
     "build:original": "tsc -b && vite build",
-    "build:fallback": "node -e \"try { require('child_process').execSync('npm install @rollup/rollup-linux-x64-gnu@latest --no-save', {stdio:'pipe'}); } catch(e) { console.log('Rollup install failed, continuing...'); }\" && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "npm run build && vercel --prod"
@@ -42,11 +42,11 @@
     "rollup": "^4.24.0",
     "@rollup/rollup-linux-x64-gnu": "^4.24.0"
   },
+  "overrides": {
+    "@rollup/rollup-linux-x64-gnu": "rollup"
+  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
-  },
-  "overrides": {
-  "@rollup/rollup-linux-x64-gnu": "rollup"
-}
+  }
 }
