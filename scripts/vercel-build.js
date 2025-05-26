@@ -4,8 +4,11 @@ import { execSync } from 'child_process';
 
 console.log('🚀 Starting Vercel build...');
 
+// Set environment variables for native dependencies
+process.env.ROLLUP_NO_NATIVE = 'true';
+
 try {
-  // Try to install the Rollup native dependency for Linux
+  // Try to install Rollup Linux dependency
   console.log('📦 Installing Rollup Linux dependency...');
   try {
     execSync('npm install @rollup/rollup-linux-x64-gnu@latest --no-save', { 
