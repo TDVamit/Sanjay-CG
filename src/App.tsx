@@ -335,7 +335,7 @@ Based on my responses, please provide comprehensive career guidance, suggesting 
             <div className="flex items-center space-x-4">
               <img src="/main-logo.png" alt="SCG Logo" className="h-12 w-auto" />
               <div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">CS Career Compass</h1>
+                <h1 className="text-3xl font-bold text-white tracking-tight">Sanjay - Career Guidance</h1>
                 <p className="text-gray-300 mt-1.5 font-light">Get personalized guidance for your CS career path</p>
               </div>
             </div>
