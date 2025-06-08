@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/build.js",
+    "build": "tsc -b && vite build",
     "build:original": "tsc -b && vite build",
     "build:fallback": "node -e \"try { require('child_process').execSync('npm install @rollup/rollup-linux-x64-gnu@latest --no-save', {stdio:'pipe'}); } catch(e) { console.log('Rollup install failed, continuing...'); }\" && tsc -b && vite build",
     "lint": "eslint .",
