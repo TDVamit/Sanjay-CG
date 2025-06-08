@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://3.7.151.6/api/v1';
+const API_BASE_URL = '/api/v1';
 
 // Types for API requests and responses
 export interface RegisterRequest {
@@ -167,7 +167,7 @@ export const authAPI = {
   },
   
   refresh: async (data: RefreshRequest): Promise<RefreshResponse> => {
-    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, data, {
+    const response = await axios.post('/api/v1/auth/refresh', data, {
       headers: {
         'Content-Type': 'application/json',
         'accept': 'application/json',

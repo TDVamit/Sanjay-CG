@@ -150,23 +150,6 @@ const Register = () => {
         <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan-reverse opacity-15" style={{ top: '60%' }}></div>
       </div>
 
-      {/* Matrix-like falling code effect - More Blurry */}
-      <div className="absolute inset-0 pointer-events-none opacity-3" style={{ filter: 'blur(2px)' }}>
-        {[...Array(10)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-green-400 text-xs font-mono animate-matrix-fall"
-            style={{
-              left: `${i * 10}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${5 + Math.random() * 3}s`,
-            }}
-          >
-            {Array.from({ length: 20 }, () => Math.random() > 0.5 ? '1' : '0').join('')}
-          </div>
-        ))}
-      </div>
-
       {/* Register Form */}
       <div className="max-w-sm w-full relative z-10">
         <div className="bg-neutral-900/60 backdrop-blur-md rounded-xl shadow-2xl p-6 border border-neutral-700/30 animate-fadeIn">
