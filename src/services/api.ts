@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api/v1';
+// Environment-based API configuration
+const isDevelopment = import.meta.env.DEV;
+const API_BASE_URL = isDevelopment 
+  ? 'http://3.7.151.6/api/v1'  // Direct backend URL for development
+  : '/api/v1';                  // Proxy URL for production
 
 // Types for API requests and responses
 export interface RegisterRequest {
@@ -167,7 +171,11 @@ export const authAPI = {
   },
   
   refresh: async (data: RefreshRequest): Promise<RefreshResponse> => {
-    const response = await axios.post('/api/v1/auth/refresh', data, {
+    const refreshUrl = isDevelopment 
+      ? 'http://3.7.151.6/api/v1/auth/refresh'  // Direct backend URL for development
+      : '/api/v1/auth/refresh';                  // Proxy URL for production
+    
+    const response = await axios.post(refreshUrl, data, {
       headers: {
         'Content-Type': 'application/json',
         'accept': 'application/json',
