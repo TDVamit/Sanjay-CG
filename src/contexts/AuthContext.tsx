@@ -95,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       
       // Register user
-      const registerResponse = await authAPI.register(userData);
+      await authAPI.register(userData);
       
       // Auto login after successful registration
       await login({
