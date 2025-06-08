@@ -5,7 +5,15 @@ echo "🚀 Starting build process..."
 # Set environment variables for native dependencies
 export ROLLUP_NO_NATIVE=true
 
-# Build with Vite (includes TypeScript compilation)
+# Try to install Rollup Linux dependency
+echo "📦 Attempting to install Rollup Linux dependency..."
+npm install @rollup/rollup-linux-x64-gnu@latest --no-save || echo "⚠️  Rollup install failed, continuing..."
+
+# Compile TypeScript
+echo "📝 Compiling TypeScript..."
+npx tsc -b
+
+# Build with Vite
 echo "📦 Building with Vite..."
 npx vite build
 
