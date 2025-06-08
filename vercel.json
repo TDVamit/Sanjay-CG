@@ -2,7 +2,7 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npm install --include=optional --legacy-peer-deps",
   "env": {
     "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096"
