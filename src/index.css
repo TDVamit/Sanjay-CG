@@ -27,11 +27,76 @@ body {
   min-height: 100vh;
   background-color: #000000;
   color: #ffffff;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
   background-color: #000000;
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+  /* Smaller text on mobile for better readability */
+  .text-responsive {
+    font-size: 0.875rem; /* 14px */
+  }
+  
+  /* Reduce padding on mobile */
+  .px-responsive {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  /* Smaller buttons on mobile */
+  .btn-responsive {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  /* Tablet styles */
+  .text-responsive {
+    font-size: 1rem; /* 16px */
+  }
+  
+  .px-responsive {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  
+  .btn-responsive {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets on mobile */
+  button, .btn, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .hover\:scale-110:hover {
+    transform: none;
+  }
+  
+  /* Simplify animations on mobile for better performance */
+  .animate-bounce-slow {
+    animation: none;
+  }
+}
+
+/* Improve mobile scrolling */
+@supports (-webkit-overflow-scrolling: touch) {
+  .overflow-scroll, .overflow-y-scroll, .overflow-x-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 /* Custom scrollbar for textareas */

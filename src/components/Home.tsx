@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-black text-white flex items-start justify-center px-8 pt-8 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex items-start justify-center px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 relative overflow-hidden">
       {/* Animated Grid Background - More Blurry */}
       <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
         <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
@@ -63,12 +63,12 @@ const Home = () => {
         <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan-reverse opacity-15" style={{ top: '60%' }}></div>
       </div>
 
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10 mt-8">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center relative z-10 mt-4 sm:mt-6 lg:mt-8">
         {/* Left side - Hero Image */}
-        <div className="flex justify-center lg:justify-start">
+        <div className="flex justify-center lg:justify-start order-2 lg:order-1">
           <div className="relative animate-fadeInLeft">
             {/* Hero Image with enhanced hover effect - No border background */}
-            <div className="w-[500px] h-[600px] flex items-center justify-center transform hover:scale-105 transition-transform duration-500 relative z-10">
+            <div className="w-[280px] h-[340px] sm:w-[350px] sm:h-[420px] md:w-[420px] md:h-[500px] lg:w-[450px] lg:h-[540px] xl:w-[500px] xl:h-[600px] flex items-center justify-center transform hover:scale-105 transition-transform duration-500 relative z-10">
               <img 
                 src="/hero-image.png" 
                 alt="Career Guidance Illustration" 
@@ -80,8 +80,8 @@ const Home = () => {
         </div>
 
         {/* Right side - Content */}
-        <div className="text-center lg:text-left animate-fadeInRight pt-16">
-          <h1 className="text-6xl lg:text-7xl xl:text-8xl font-black mb-4 leading-tight">
+        <div className="text-center lg:text-left animate-fadeInRight pt-4 sm:pt-8 lg:pt-16 order-1 lg:order-2">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl 2xl:text-8xl font-black mb-4 leading-tight">
             <span 
               className="text-white drop-shadow-2xl animate-slideInUp hover:animate-text-glow transition-all duration-300"
               style={{ 
@@ -111,10 +111,10 @@ const Home = () => {
             </span>
           </h1>
           
-          <div className="mb-8 animate-slideInUp delay-700">
+          <div className="mb-6 sm:mb-8 animate-slideInUp delay-700">
             <Link
               to="/assessment"
-              className="inline-block text-black font-bold text-xl px-10 py-5 rounded-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl animate-bounce-slow relative overflow-hidden"
+              className="inline-block text-black font-bold text-base sm:text-lg lg:text-xl px-6 py-3 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl animate-bounce-slow relative overflow-hidden"
               style={{ 
                 backgroundColor: '#39FF14',
                 boxShadow: '0 20px 40px rgba(57, 255, 20, 0.4), 0 0 60px rgba(57, 255, 20, 0.2)'

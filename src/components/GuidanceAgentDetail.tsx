@@ -485,8 +485,7 @@ const GuidanceAgentDetail = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={goBackToList}
-                className="p-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors"
-                title="Back to list"
+                className="flex items-center text-blue-400 hover:text-blue-300 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -496,18 +495,6 @@ const GuidanceAgentDetail = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <a
-                href={agent.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <span>Visit Agent</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-              
               {isAdmin && (
                 <button
                   onClick={toggleEditMode}
