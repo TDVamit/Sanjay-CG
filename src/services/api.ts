@@ -72,6 +72,12 @@ export interface ChatResponse {
   model_used: string;
 }
 
+// New intelligent chat types
+export interface IntelligentChatResponse {
+  response_to_user: string;
+  recommended_pages: string[];
+}
+
 export interface ResumeAnalysisRequest {
   file: File;
 }
@@ -454,6 +460,38 @@ export const chatAPI = {
   chat: async (data: ChatRequest): Promise<ChatResponse> => {
     const response = await apiClient.post('/documents/chat', data);
     return response.data;
+  },
+
+  // New intelligent chat endpoint
+  intelligentChat: async (userMessage: string): Promise<IntelligentChatResponse> => {
+    const prompt = `you are friendly chat bot of a career guidance website
+this site have 5 pages:
+home, assessment, resume-analyzer, roadmaps, personalized-guidance
+
+your task is to give proper response to the user message and guide them to our sites pages
+
+response should strictly in json response 
+{
+"response_to_user": "your reply to user",
+"recommended_pages": ["list of pages to recommend from the given ones"]
+}
+make sure to return pages from the given five
+user_response: "${userMessage}"`;
+
+    const response = await apiClient.post('/documents/chat', { prompt });
+    
+    try {
+      // Try to parse the JSON response from the AI
+      const parsedResponse = JSON.parse(response.data.response);
+      return parsedResponse as IntelligentChatResponse;
+    } catch (error) {
+      console.error('Failed to parse AI response as JSON:', error);
+      // Fallback response if parsing fails
+      return {
+        response_to_user: response.data.response || "I'm here to help you with your career guidance. Please let me know what you're looking for!",
+        recommended_pages: ["home", "assessment", "resume-analyzer", "roadmaps", "personalized-guidance"]
+      };
+    }
   }
 };
 
@@ -614,4 +652,4 @@ export const guidanceAgentAPI = {
   }
 };
 
-export default apiClient; 
+export default apiClient;

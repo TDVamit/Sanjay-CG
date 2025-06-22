@@ -128,6 +128,40 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
     }));
   }, [dragState]);
 
+  // Handle touch move for canvas panning
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (dragState.dragType !== 'canvas' || event.touches.length !== 1) return;
+    
+    event.preventDefault();
+    const touch = event.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+    const lastX = dragState.lastPos?.x ?? dragState.startPos.x;
+    const lastY = dragState.lastPos?.y ?? dragState.startPos.y;
+    
+    const deltaX = currentX - lastX;
+    const deltaY = currentY - lastY;
+
+    // Immediate canvas panning
+    const newOffset = {
+      x: canvasOffsetRef.current.x + deltaX,
+      y: canvasOffsetRef.current.y + deltaY
+    };
+    canvasOffsetRef.current = newOffset;
+    
+    // Force immediate re-render
+    requestAnimationFrame(() => {
+      setCanvasOffset(newOffset);
+    });
+    
+    // Update position
+    setDragState(prev => ({
+      ...prev,
+      currentPos: { x: currentX, y: currentY },
+      lastPos: { x: currentX, y: currentY }
+    }));
+  }, [dragState]);
+
   // Handle mouse up
   const handleMouseUp = useCallback(() => {
     setDragState({
@@ -138,18 +172,32 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
     });
   }, []);
 
-  // Add mouse event listeners
+  // Handle touch end
+  const handleTouchEnd = useCallback(() => {
+    setDragState({
+      isDragging: false,
+      dragType: null,
+      startPos: { x: 0, y: 0 },
+      currentPos: { x: 0, y: 0 }
+    });
+  }, []);
+
+  // Add mouse and touch event listeners
   useEffect(() => {
     if (dragState.dragType) {
       const options = { passive: false };
       document.addEventListener('mousemove', handleMouseMove, options);
       document.addEventListener('mouseup', handleMouseUp, options);
+      document.addEventListener('touchmove', handleTouchMove, options);
+      document.addEventListener('touchend', handleTouchEnd, options);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [dragState.dragType, handleMouseMove, handleMouseUp]);
+  }, [dragState.dragType, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
   // Canvas mouse down for panning
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent) => {
@@ -161,6 +209,24 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
         startPos: { x: event.clientX, y: event.clientY },
         currentPos: { x: event.clientX, y: event.clientY },
         lastPos: { x: event.clientX, y: event.clientY }
+      });
+    }
+  }, []);
+
+  // Canvas touch start for panning
+  const handleCanvasTouchStart = useCallback((event: React.TouchEvent) => {
+    if (event.touches.length !== 1) return;
+    
+    const touch = event.touches[0];
+    const isCanvasClick = event.target === event.currentTarget || (event.target as Element)?.classList?.contains('canvas-background');
+    if (isCanvasClick) {
+      event.preventDefault();
+      setDragState({
+        isDragging: false,
+        dragType: 'canvas',
+        startPos: { x: touch.clientX, y: touch.clientY },
+        currentPos: { x: touch.clientX, y: touch.clientY },
+        lastPos: { x: touch.clientX, y: touch.clientY }
       });
     }
   }, []);
@@ -355,6 +421,7 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
             willChange: 'transform'
           }}
           onMouseDown={handleCanvasMouseDown}
+          onTouchStart={handleCanvasTouchStart}
         >
           {/* Render connections */}
           <svg

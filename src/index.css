@@ -90,6 +90,46 @@ body {
   .animate-bounce-slow {
     animation: none;
   }
+  
+  /* Disable background animations on mobile for better performance */
+  .animate-grid-move,
+  .animate-float,
+  .animate-float-slow,
+  .animate-beam,
+  .animate-beam-delayed,
+  .animate-beam-horizontal,
+  .animate-pulse-glow,
+  .animate-scan,
+  .animate-scan-reverse {
+    animation: none !important;
+  }
+  
+  /* Hide animated background elements on mobile */
+  .bg-grid-pattern {
+    display: none;
+  }
+}
+
+/* Additional mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Disable resource-intensive animations on smaller screens */
+  .animate-grid-move,
+  .animate-float,
+  .animate-float-slow,
+  .animate-beam,
+  .animate-beam-delayed,
+  .animate-beam-horizontal,
+  .animate-pulse-glow,
+  .animate-scan,
+  .animate-scan-reverse {
+    animation: none !important;
+  }
+  
+  /* Simplify background effects on mobile */
+  .bg-grid-pattern {
+    opacity: 0.1 !important;
+    animation: none !important;
+  }
 }
 
 /* Improve mobile scrolling */

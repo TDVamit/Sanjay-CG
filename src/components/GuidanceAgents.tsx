@@ -593,37 +593,39 @@ const GuidanceAgents: React.FC = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <form onSubmit={handleSearch} className="flex-1">
+      <div className="flex flex-col gap-4">
+        <form onSubmit={handleSearch} className="w-full">
           <div className="flex">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search agents..."
-              className="flex-1 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-l-lg text-white placeholder-neutral-400 focus:outline-none focus:border-green-400"
+              className="flex-1 min-w-0 px-3 sm:px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-l-lg text-white placeholder-neutral-400 focus:outline-none focus:border-green-400 text-sm sm:text-base"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700 transition-colors"
+              className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-r-lg hover:bg-green-700 transition-colors whitespace-nowrap text-sm sm:text-base"
             >
               Search
             </button>
           </div>
         </form>
         
-        <select
-          value={selectedCategoryId}
-          onChange={(e) => handleCategoryFilter(e.target.value)}
-          className="px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400"
-        >
-          <option value="">All Categories</option>
-          {categories.map(category => (
-            <option key={category._id} value={category._id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
+        <div className="w-full">
+          <select
+            value={selectedCategoryId}
+            onChange={(e) => handleCategoryFilter(e.target.value)}
+            className="w-full px-3 sm:px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400 text-sm sm:text-base"
+          >
+            <option value="">All Categories</option>
+            {categories.map(category => (
+              <option key={category._id} value={category._id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {error && (

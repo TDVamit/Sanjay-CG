@@ -105,11 +105,13 @@ const Header = () => {
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         {/* Logo */}
         <div className="flex items-center">
-          <img 
-            src="/main-logo.png" 
-            alt="HCG Logo" 
-            className="h-8 sm:h-10 lg:h-12 w-auto mr-2 sm:mr-4"
-          />
+          <Link to="/" className="flex items-center">
+            <img 
+              src="/main-logo.png" 
+              alt="HCG Logo" 
+              className="h-8 sm:h-10 lg:h-12 w-auto mr-2 sm:mr-4 hover:opacity-80 transition-opacity"
+            />
+          </Link>
         </div>
 
         {/* Desktop Navigation */}

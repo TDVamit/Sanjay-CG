@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { chatAPI, type IntelligentChatResponse } from '../services/api';
 
 interface ChatPopupProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface Message {
   text: string;
   sender: 'user' | 'bot';
   timestamp: Date;
-  showNavigation?: boolean;
+  recommendedPages?: string[];
 }
 
 const ChatPopup = ({ isOpen, onClose }: ChatPopupProps) => {
@@ -22,48 +23,71 @@ const ChatPopup = ({ isOpen, onClose }: ChatPopupProps) => {
       text: "Hi! I'm here to help you with your career guidance. How can I assist you today?",
       sender: 'bot',
       timestamp: new Date(),
-      showNavigation: true
+      recommendedPages: ['home', 'assessment', 'resume-analyzer', 'roadmaps', 'personalized-guidance']
     }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const navigationOptions = [
-    { label: '🏠 Home', path: '/', color: '#39FF14' },
-    { label: '📊 Assessment', path: '/assessment', color: '#00BFFF' },
-    { label: '📄 Resume Analyzer', path: '/resume-analyzer', color: '#FF6B35' },
-    { label: '🗺️ Career Roadmaps', path: '/roadmaps', color: '#8A2BE2' },
-    { label: '🎯 Personal Guidance', path: '/personalized-guidance', color: '#FF1493' }
-  ];
+  // Page mapping for navigation and display
+  const pageMapping = {
+    'home': { label: '🏠 Home', path: '/', color: '#39FF14' },
+    'assessment': { label: '📊 Assessment', path: '/assessment', color: '#00BFFF' },
+    'resume-analyzer': { label: '📄 Resume Analyzer', path: '/resume-analyzer', color: '#FF6B35' },
+    'roadmaps': { label: '🗺️ Career Roadmaps', path: '/roadmaps', color: '#8A2BE2' },
+    'personalized-guidance': { label: '🎯 Personal Guidance', path: '/personalized-guidance', color: '#FF1493' }
+  };
 
   const handleNavigation = (path: string) => {
     navigate(path);
     onClose();
   };
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const handleSendMessage = async () => {
+    if (!message.trim() || isLoading) return;
 
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: messages.length + 1,
       text: message,
       sender: 'user',
       timestamp: new Date()
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
     setMessage('');
+    setIsLoading(true);
 
-    // Simulate bot response with navigation options
-    setTimeout(() => {
+    try {
+      // Call the intelligent chat API
+      const response: IntelligentChatResponse = await chatAPI.intelligentChat(message);
+      
       const botResponse: Message = {
         id: messages.length + 2,
-        text: "Great question! I'd be happy to help you with that. You can explore different sections of our platform using the navigation buttons below, or feel free to ask me anything else!",
+        text: response.response_to_user,
         sender: 'bot',
         timestamp: new Date(),
-        showNavigation: true
+        recommendedPages: response.recommended_pages.filter(page => 
+          Object.keys(pageMapping).includes(page)
+        )
       };
+      
       setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+      
+      // Fallback response on error
+      const errorResponse: Message = {
+        id: messages.length + 2,
+        text: "I apologize, but I'm having trouble connecting right now. Please try again in a moment, or feel free to explore our different sections using the navigation buttons below!",
+        sender: 'bot',
+        timestamp: new Date(),
+        recommendedPages: ['home', 'assessment', 'resume-analyzer', 'roadmaps', 'personalized-guidance']
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -121,41 +145,73 @@ const ChatPopup = ({ isOpen, onClose }: ChatPopupProps) => {
                 </div>
               </div>
               
-              {/* Navigation buttons for bot messages */}
-              {msg.sender === 'bot' && msg.showNavigation && (
+              {/* Dynamic navigation buttons based on AI recommendations */}
+              {msg.sender === 'bot' && msg.recommendedPages && msg.recommendedPages.length > 0 && (
                 <div className="flex flex-col space-y-2 ml-2 sm:ml-4 mb-2">
-                  <div className="text-xs text-gray-500 font-medium mb-1">Quick Navigation:</div>
+                  <div className="text-xs text-gray-500 font-medium mb-1">Recommended for you:</div>
                   <div className="grid grid-cols-2 gap-1 sm:gap-2">
-                    {navigationOptions.slice(0, 4).map((option, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleNavigation(option.path)}
-                        className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center min-h-[44px]"
-                        style={{ 
-                          backgroundColor: option.color,
-                          boxShadow: `0 4px 15px ${option.color}40`
-                        }}
-                      >
-                        <span className="text-center leading-tight">{option.label}</span>
-                      </button>
-                    ))}
+                    {msg.recommendedPages.slice(0, 4).map((pageKey, index) => {
+                      const pageInfo = pageMapping[pageKey as keyof typeof pageMapping];
+                      if (!pageInfo) return null;
+                      
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleNavigation(pageInfo.path)}
+                          className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center min-h-[44px]"
+                          style={{ 
+                            backgroundColor: pageInfo.color,
+                            boxShadow: `0 4px 15px ${pageInfo.color}40`
+                          }}
+                        >
+                          <span className="text-center leading-tight">{pageInfo.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="grid grid-cols-1 gap-1 sm:gap-2 mt-1">
-                    <button
-                      onClick={() => handleNavigation(navigationOptions[4].path)}
-                      className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center min-h-[44px]"
-                      style={{ 
-                        backgroundColor: navigationOptions[4].color,
-                        boxShadow: `0 4px 15px ${navigationOptions[4].color}40`
-                      }}
-                    >
-                      <span className="text-center leading-tight">{navigationOptions[4].label}</span>
-                    </button>
-                  </div>
+                  {/* Show remaining recommendations if more than 4 */}
+                  {msg.recommendedPages.length > 4 && (
+                    <div className="grid grid-cols-1 gap-1 sm:gap-2 mt-1">
+                      {msg.recommendedPages.slice(4).map((pageKey, index) => {
+                        const pageInfo = pageMapping[pageKey as keyof typeof pageMapping];
+                        if (!pageInfo) return null;
+                        
+                        return (
+                          <button
+                            key={index + 4}
+                            onClick={() => handleNavigation(pageInfo.path)}
+                            className="px-2 py-1.5 sm:px-3 sm:py-2 text-xs font-semibold text-white rounded-xl hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center min-h-[44px]"
+                            style={{ 
+                              backgroundColor: pageInfo.color,
+                              boxShadow: `0 4px 15px ${pageInfo.color}40`
+                            }}
+                          >
+                            <span className="text-center leading-tight">{pageInfo.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
+          
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="flex justify-start mb-2 sm:mb-3">
+              <div className="bg-gray-100/80 backdrop-blur-sm text-gray-800 rounded-bl-md rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <span>Thinking...</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Input with rounded corners */}
@@ -166,21 +222,27 @@ const ChatPopup = ({ isOpen, onClose }: ChatPopupProps) => {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about your career..."
-              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300/50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-opacity-50 bg-white/90 backdrop-blur-sm text-gray-900 placeholder-gray-500 shadow-inner text-sm"
+              disabled={isLoading}
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 border border-gray-300/50 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-opacity-50 bg-white/90 backdrop-blur-sm text-gray-900 placeholder-gray-500 shadow-inner text-sm disabled:opacity-50"
               style={{ '--tw-ring-color': '#39FF14' } as React.CSSProperties}
               rows={1}
             />
             <button
               onClick={handleSendMessage}
-              className="px-3 py-2 sm:px-5 sm:py-3 text-black font-bold rounded-2xl hover:opacity-90 transition-all duration-200 hover:scale-105 shadow-lg flex items-center justify-center min-w-[44px] min-h-[44px]"
+              disabled={isLoading || !message.trim()}
+              className="px-3 py-2 sm:px-5 sm:py-3 text-black font-bold rounded-2xl hover:opacity-90 transition-all duration-200 hover:scale-105 shadow-lg flex items-center justify-center min-w-[44px] min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               style={{ 
                 backgroundColor: '#39FF14',
                 boxShadow: '0 8px 25px rgba(57, 255, 20, 0.3)'
               }}
             >
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-black"></div>
+              ) : (
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
