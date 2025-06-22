@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { resumeAPI } from '../services/api';
 import type { ResumeAnalysisResponse } from '../services/api';
 
@@ -9,7 +9,23 @@ const ResumeAnalyzer = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+      const isMobileDevice = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent) || 
+                           window.innerWidth <= 768;
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -111,6 +127,23 @@ const ResumeAnalyzer = () => {
     if (score >= 9) return 'bg-green-400/20';
     if (score >= 7) return 'bg-yellow-400/20';
     return 'bg-red-400/20';
+  };
+
+  const openPdfInNewTab = () => {
+    if (pdfUrl) {
+      window.open(pdfUrl, '_blank');
+    }
+  };
+
+  const downloadPdf = () => {
+    if (pdfUrl && uploadedFile) {
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = uploadedFile.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -244,9 +277,97 @@ const ResumeAnalyzer = () => {
               Get AI-powered feedback and suggestions to improve your resume
             </p>
 
-            <div className="flex gap-6">
-              {/* Left side - Upload/Results */}
-              <div className={`${pdfUrl ? 'w-2/3' : 'w-full'} transition-all duration-300`}>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* PDF Preview - Shows first on mobile, right side on desktop */}
+              {pdfUrl && (
+                <div className="w-full lg:w-1/3 lg:order-2">
+                  <div className="bg-neutral-800/40 backdrop-blur-sm rounded-lg p-4 border border-neutral-600/30 h-full">
+                    <h3 className="text-white font-medium mb-4 text-center">Uploaded Resume</h3>
+                    
+                    {/* Mobile PDF Viewer - Show buttons instead of iframe on mobile */}
+                    {isMobile ? (
+                      <div className="bg-neutral-700/40 rounded-lg p-8 text-center space-y-4" style={{ minHeight: '400px' }}>
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-white font-medium mb-2">PDF Preview</p>
+                            <p className="text-neutral-400 text-sm mb-4">PDF viewer is not available on mobile</p>
+                          </div>
+                          
+                          <div className="space-y-3 w-full">
+                            <button
+                              onClick={openPdfInNewTab}
+                              className="w-full px-4 py-3 text-black font-medium rounded-lg transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2"
+                              style={{ backgroundColor: '#39FF14' }}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                              <span>Open PDF in New Tab</span>
+                            </button>
+                            
+                            <button
+                              onClick={downloadPdf}
+                              className="w-full px-4 py-3 bg-neutral-600/40 backdrop-blur-sm text-white rounded-lg hover:bg-neutral-500/40 border border-neutral-500/30 transition-all duration-300 flex items-center justify-center space-x-2"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span>Download PDF</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Desktop PDF Viewer - Show iframe on desktop */
+                      <div className="bg-white rounded-lg overflow-hidden" style={{ height: '400px', minHeight: '400px' }}>
+                        <iframe
+                          src={pdfUrl}
+                          className="w-full h-full"
+                          title="Resume Preview"
+                        />
+                      </div>
+                    )}
+                    
+                    {uploadedFile && (
+                      <p className="text-neutral-400 text-xs mt-2 text-center truncate">
+                        {uploadedFile.name}
+                      </p>
+                    )}
+                    
+                    {/* Desktop PDF Actions - Show only on desktop */}
+                    {!isMobile && (
+                      <div className="flex space-x-2 mt-4">
+                        <button
+                          onClick={openPdfInNewTab}
+                          className="flex-1 px-3 py-2 bg-neutral-600/40 backdrop-blur-sm text-white rounded-lg hover:bg-neutral-500/40 border border-neutral-500/30 transition-all duration-300 text-sm flex items-center justify-center space-x-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          <span>Open</span>
+                        </button>
+                        <button
+                          onClick={downloadPdf}
+                          className="flex-1 px-3 py-2 bg-neutral-600/40 backdrop-blur-sm text-white rounded-lg hover:bg-neutral-500/40 border border-neutral-500/30 transition-all duration-300 text-sm flex items-center justify-center space-x-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Main Content - Upload/Results - Shows second on mobile, left side on desktop */}
+              <div className={`${pdfUrl ? 'w-full lg:w-2/3' : 'w-full'} lg:order-1 transition-all duration-300`}>
                 {/* Upload Section - Hidden during analysis and when results are shown */}
                 {!isUploading && !analysisResult && (
                   <div className="mb-8">
@@ -389,27 +510,6 @@ const ResumeAnalyzer = () => {
                   </div>
                 )}
               </div>
-
-              {/* Right side - PDF Preview */}
-              {pdfUrl && (
-                <div className="w-1/3">
-                  <div className="bg-neutral-800/40 backdrop-blur-sm rounded-lg p-4 border border-neutral-600/30 h-full">
-                    <h3 className="text-white font-medium mb-4 text-center">Uploaded Resume</h3>
-                    <div className="bg-white rounded-lg overflow-hidden" style={{ height: '600px' }}>
-                      <iframe
-                        src={pdfUrl}
-                        className="w-full h-full"
-                        title="Resume Preview"
-                      />
-                    </div>
-                    {uploadedFile && (
-                      <p className="text-neutral-400 text-xs mt-2 text-center truncate">
-                        {uploadedFile.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
