@@ -48,7 +48,7 @@ const CareerRoadmaps = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await roadmapAPI.getAll(page, 10, search, categoryId);
+      const response = await roadmapAPI.getAll(page, 12, search, categoryId);
       setRoadmaps(response.items);
       setCurrentPage(response.page);
       setTotalPages(response.total_pages);

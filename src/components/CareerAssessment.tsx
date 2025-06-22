@@ -1,6 +1,5 @@
-import { useState, useRef } from 'react';
-import { chatAPI } from '../services/api';
-import PDFViewer from './PDFViewer';
+import { useState, useRef, useEffect } from 'react';
+import { chatAPI, roadmapAPI, type RoadmapListItem } from '../services/api';
 
 // Define types for our form
 type Question = {
@@ -10,76 +9,65 @@ type Question = {
   category: string;
 };
 
-type JobRecommendation = {
+type RoadmapRecommendation = {
   name: string;
   description: string;
+  id: string;
 };
 
-type JobResponse = {
-  job1: JobRecommendation;
-  job2: JobRecommendation;
-  job3: JobRecommendation;
-  job4: JobRecommendation;
-};
-
-// Job to PDF mapping
-const jobToPdfMap: Record<string, string> = {
-  "AI Engineer": "ai-engineer.pdf",
-  "AI and Data Scientist": "mlops.pdf",
-  "Android": "android.pdf",
-  "Backend": "backend.pdf",
-  "Blockchain": "blockchain.pdf",
-  "Cyber Security": "cyber-security.pdf",
-  "Data Analyst": "data-analyst.pdf",
-  "Developer Relations": "devrel.pdf",
-  "Devops": "devops.pdf",
-  "Engineering Manager": "engineering-manager.pdf",
-  "Frontend": "frontend.pdf",
-  "Full-Stack": "full-stack.pdf",
-  "Game Developer": "game-developer.pdf",
-  "iOS": "ios.pdf",
-  "MLOps": "mlops.pdf",
-  "PostgreSQL": "postgresql-dba.pdf",
-  "Product Manager": "product-manager.pdf",
-  "QA": "qa.pdf",
-  "Software Architect": "software-architect.pdf",
-  "Technical Writer": "technical-writer.pdf",
-  "UX Design": "ux-design.pdf",
-  // Additional variations that might come from OpenAI
-  "Full Stack": "full-stack.pdf",
-  "DevOps": "devops.pdf",
-  "AI & Data Scientist": "mlops.pdf",
-  "Data Scientist": "mlops.pdf",
-  "Frontend Developer": "frontend.pdf",
-  "Backend Developer": "backend.pdf",
-  "Android Developer": "android.pdf",
-  "iOS Developer": "ios.pdf",
-  "Game Development": "game-developer.pdf",
-  "UX Designer": "ux-design.pdf",
-  "UI/UX Designer": "ux-design.pdf",
-  "Quality Assurance": "qa.pdf",
-  "Software Engineer": "full-stack.pdf",
-  "Web Developer": "full-stack.pdf",
-  "Mobile Developer": "android.pdf",
-  "Database Administrator": "postgresql-dba.pdf",
-  "DBA": "postgresql-dba.pdf",
-  "Security Engineer": "cyber-security.pdf",
-  "Cybersecurity": "cyber-security.pdf",
-  "Machine Learning Engineer": "mlops.pdf",
-  "ML Engineer": "mlops.pdf",
-  "Data Engineer": "data-analyst.pdf",
-  "Technical Writing": "technical-writer.pdf",
-  "Developer Advocate": "devrel.pdf",
-  "Dev Rel": "devrel.pdf"
+type RoadmapResponse = {
+  roadmap1: RoadmapRecommendation;
+  roadmap2: RoadmapRecommendation;
+  roadmap3: RoadmapRecommendation;
+  roadmap4: RoadmapRecommendation;
 };
 
 const CareerAssessment = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState<JobResponse | null>(null);
+  const [aiResponse, setAiResponse] = useState<RoadmapResponse | null>(null);
   const [validationErrors, setValidationErrors] = useState<number[]>([]);
-  const [selectedPdf, setSelectedPdf] = useState<{ url: string; jobName: string } | null>(null);
+  const [allRoadmaps, setAllRoadmaps] = useState<RoadmapListItem[]>([]);
+  const [loadingRoadmaps, setLoadingRoadmaps] = useState(false);
   const firstErrorRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Load all roadmaps from all pages
+  const loadAllRoadmaps = async () => {
+    setLoadingRoadmaps(true);
+    const allRoadmapsList: RoadmapListItem[] = [];
+    
+    try {
+      let page = 1;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const response = await roadmapAPI.getAll(page, 100); // Get 100 items per page
+        allRoadmapsList.push(...response.items);
+        
+        hasMore = response.has_next;
+        page++;
+      }
+      
+      setAllRoadmaps(allRoadmapsList);
+    } catch (error) {
+      console.error('Error loading roadmaps:', error);
+      // Fallback - try to get at least the first page
+      try {
+        const response = await roadmapAPI.getAll(1, 100);
+        setAllRoadmaps(response.items);
+      } catch (fallbackError) {
+        console.error('Failed to load any roadmaps:', fallbackError);
+        setAllRoadmaps([]);
+      }
+    } finally {
+      setLoadingRoadmaps(false);
+    }
+  };
+
+  // Load roadmaps on component mount
+  useEffect(() => {
+    loadAllRoadmaps();
+  }, []);
   
   // Group questions by category
   const categories = [
@@ -171,7 +159,7 @@ const CareerAssessment = () => {
   };
   
   // Parse JSON response from OpenAI
-  const parseJobResponse = (response: string): JobResponse | null => {
+  const parseRoadmapResponse = (response: string): RoadmapResponse | null => {
     try {
       // Clean the response string
       let cleaned = response.trim();
@@ -182,59 +170,26 @@ const CareerAssessment = () => {
       
       // Parse JSON
       const parsed = JSON.parse(cleaned);
-      return parsed as JobResponse;
+      return parsed as RoadmapResponse;
     } catch (error) {
       console.error('Error parsing JSON response:', error);
       return null;
     }
   };
   
-  // Handle job card click to open PDF
-  const handleJobClick = (jobName: string) => {
-    // Try exact match first
-    let pdfFileName = jobToPdfMap[jobName];
-    
-    // If no exact match, try case-insensitive and trimmed match
-    if (!pdfFileName) {
-      const normalizedJobName = jobName.trim();
-      const matchingKey = Object.keys(jobToPdfMap).find(key => 
-        key.toLowerCase() === normalizedJobName.toLowerCase()
-      );
-      
-      if (matchingKey) {
-        pdfFileName = jobToPdfMap[matchingKey];
-      }
-    }
-    
-    // If still no match, try partial matches
-    if (!pdfFileName) {
-      const normalizedJobName = jobName.toLowerCase().trim();
-      const partialMatchKey = Object.keys(jobToPdfMap).find(key => {
-        const keyLower = key.toLowerCase();
-        return keyLower.includes(normalizedJobName) || normalizedJobName.includes(keyLower);
-      });
-      
-      if (partialMatchKey) {
-        pdfFileName = jobToPdfMap[partialMatchKey];
-      }
-    }
-    
-    if (pdfFileName) {
-      const pdfUrl = `/pdfs/${pdfFileName}`;
-      setSelectedPdf({ url: pdfUrl, jobName });
-    } else {
-      alert(`PDF not found for job: ${jobName}. Please check if the PDF exists in the pdfs folder.`);
-    }
-  };
-  
-  // Close PDF viewer
-  const closePdfViewer = () => {
-    setSelectedPdf(null);
+  // Handle roadmap card click to navigate to roadmap
+  const handleRoadmapClick = (roadmapId: string) => {
+    window.open(`/roadmaps/${roadmapId}`, '_blank');
   };
 
   // Submit to OpenAI
   const submitToOpenAI = async () => {
     if (!validateCurrentStep()) {
+      return;
+    }
+    
+    if (allRoadmaps.length === 0) {
+      alert('No roadmaps available. Please try again later.');
       return;
     }
     
@@ -245,34 +200,57 @@ const CareerAssessment = () => {
       return acc;
     }, {} as Record<string, string>);
 
+    // Create roadmap list for the prompt
+    const roadmapList = allRoadmaps.map(roadmap => ({
+      id: roadmap._id,
+      name: roadmap.name,
+      description: roadmap.description
+    }));
+
     const prompt = `
-Based on the following career assessment responses from a Computer Science student, recommend 4 specific job roles that best match their profile. Consider their interests, skills, goals, and awareness level.
+Based on the following career assessment responses from a Computer Science student, recommend 4 specific roadmaps that best match their profile from the available roadmaps. Consider their interests, skills, goals, and awareness level.
 
 Assessment Responses:
 ${Object.entries(formData).map(([, value], index) => 
   `${index + 1}. ${questions[index]?.text}: ${value}`
 ).join('\n')}
 
+Available Roadmaps:
+${roadmapList.map((roadmap, index) => 
+  `${index + 1}. ID: ${roadmap.id}, Name: "${roadmap.name}", Description: "${roadmap.description}"`
+).join('\n')}
+
 Please respond with ONLY a JSON object in this exact format (no additional text, no markdown formatting):
 {
-  "job1": {"name": "Specific Job Title", "description": "Brief description of why this role fits (2-3 sentences)"},
-  "job2": {"name": "Specific Job Title", "description": "Brief description of why this role fits (2-3 sentences)"},
-  "job3": {"name": "Specific Job Title", "description": "Brief description of why this role fits (2-3 sentences)"},
-  "job4": {"name": "Specific Job Title", "description": "Brief description of why this role fits (2-3 sentences)"}
+  "roadmap1": {"name": "Exact Roadmap Name", "description": "Brief explanation of why this roadmap fits their profile (2-3 sentences)", "id": "exact_roadmap_id"},
+  "roadmap2": {"name": "Exact Roadmap Name", "description": "Brief explanation of why this roadmap fits their profile (2-3 sentences)", "id": "exact_roadmap_id"},
+  "roadmap3": {"name": "Exact Roadmap Name", "description": "Brief explanation of why this roadmap fits their profile (2-3 sentences)", "id": "exact_roadmap_id"},
+  "roadmap4": {"name": "Exact Roadmap Name", "description": "Brief explanation of why this roadmap fits their profile (2-3 sentences)", "id": "exact_roadmap_id"}
 }
 
-Use these specific job titles when possible: AI Engineer, Android Developer, Backend Developer, Blockchain Developer, Cyber Security Engineer, Data Analyst, Developer Relations, DevOps Engineer, Engineering Manager, Frontend Developer, Full-Stack Developer, Game Developer, iOS Developer, MLOps Engineer, PostgreSQL DBA, Product Manager, QA Engineer, Software Architect, Technical Writer, UX Designer.
+IMPORTANT: 
+- Use only the exact roadmap names and IDs from the available roadmaps list above
+- Choose 4 different roadmaps that best match the student's profile
+- Make sure all IDs are valid and exist in the provided list
 `;
 
     try {
       const response = await chatAPI.chat({ prompt });
       
-      
-      const parsedResponse = parseJobResponse(response.response);
+      const parsedResponse = parseRoadmapResponse(response.response);
       
       if (parsedResponse) {
-        setAiResponse(parsedResponse);
-        setCurrentStep(7); // Move to results step
+        // Validate that all recommended roadmap IDs exist
+        const validRoadmaps = Object.values(parsedResponse).every(roadmap => 
+          allRoadmaps.some(r => r._id === roadmap.id)
+        );
+        
+        if (validRoadmaps) {
+          setAiResponse(parsedResponse);
+          setCurrentStep(7); // Move to results step
+        } else {
+          alert('Some recommended roadmaps are not available. Please try again.');
+        }
       } else {
         alert('Error parsing AI response. Please try again.');
       }
@@ -314,17 +292,6 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
     setValidationErrors([]);
     setQuestions(questions.map(q => ({ ...q, answer: '' })));
   };
-
-  // If showing PDF viewer
-  if (selectedPdf) {
-    return (
-      <PDFViewer 
-        pdfUrl={selectedPdf.url}
-        jobName={selectedPdf.jobName}
-        onClose={closePdfViewer}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black py-8 relative overflow-hidden">
@@ -396,6 +363,7 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
             {currentStep <= 6 && (
               <span className="text-sm text-gray-300">
                 Step {currentStep} of {categories.length}
+                {loadingRoadmaps && <span className="ml-2 text-yellow-400">(Loading roadmaps...)</span>}
               </span>
             )}
           </div>
@@ -458,7 +426,7 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
               
               <button
                 onClick={goToNextStep}
-                disabled={isLoading}
+                disabled={isLoading || loadingRoadmaps}
                 className="px-6 py-2 text-black rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
                 style={{ backgroundColor: '#39FF14' }}
               >
@@ -466,6 +434,11 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
                     <span>Analyzing...</span>
+                  </>
+                ) : loadingRoadmaps ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                    <span>Loading...</span>
                   </>
                 ) : (
                   <span>{currentStep === 6 ? 'Get Recommendations' : 'Next'}</span>
@@ -477,30 +450,30 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
           <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md p-6 border border-neutral-700/20">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-white mb-2">
-                Your Career Recommendations
+                Your Roadmap Recommendations
               </h2>
               <p className="text-neutral-300">
-                Based on your responses, here are 4 career paths that might be perfect for you:
+                Based on your responses, here are 4 career roadmaps that might be perfect for you:
               </p>
             </div>
 
             {aiResponse && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {Object.entries(aiResponse).map(([key, job]) => (
+                {Object.entries(aiResponse).map(([key, roadmap]) => (
                   <div 
                     key={key}
-                    onClick={() => handleJobClick(job.name)}
+                    onClick={() => handleRoadmapClick(roadmap.id)}
                     className="border border-neutral-600/30 rounded-lg p-6 hover:shadow-lg transition-all cursor-pointer bg-neutral-800/40 backdrop-blur-sm hover:border-opacity-80"
                     style={{ borderColor: '#39FF14', borderWidth: '1px' }}
                   >
                     <h3 className="text-lg font-semibold mb-3" style={{ color: '#39FF14' }}>
-                      {job.name}
+                      {roadmap.name}
                     </h3>
                     <p className="text-neutral-300 text-sm leading-relaxed">
-                      {job.description}
+                      {roadmap.description}
                     </p>
                     <div className="mt-4 text-xs font-medium" style={{ color: '#39FF14' }}>
-                      Click to view career roadmap →
+                      Click to view roadmap →
                     </div>
                   </div>
                 ))}
