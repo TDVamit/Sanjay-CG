@@ -7,6 +7,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 type ViewMode = 'view' | 'builder';
 
+// Special category IDs that should be handled separately
+const SPECIAL_CATEGORIES = {
+  ROLE_BASED: '5717636e-6ff0-4a91-9cdb-678309c69514',
+  SKILL_BASED: 'f8f2a743-2db7-4fc2-a77f-8ae7c2a8d99c'
+} as const;
+
 const RoadmapDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -25,6 +31,9 @@ const RoadmapDetail = () => {
   
   // Add edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Special category selection for edit mode
+  const [selectedSpecialCategory, setSelectedSpecialCategory] = useState<string>(SPECIAL_CATEGORIES.SKILL_BASED);
   
   // Inline category management state
   const [showCategoryInput, setShowCategoryInput] = useState(false);
@@ -46,6 +55,53 @@ const RoadmapDetail = () => {
   // Helper function to extract category IDs from categories array
   const extractCategoryIds = (categories: any[]): string[] => {
     return categories?.map(cat => getCategoryId(cat)).filter((id): id is string => id !== undefined && id !== null && id !== '') || [];
+  };
+
+  // Helper function to get current special category
+  const getCurrentSpecialCategory = (): string => {
+    if (!roadmap?.categories) return SPECIAL_CATEGORIES.SKILL_BASED;
+    
+    const hasSkillBased = roadmap.categories.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.SKILL_BASED);
+    const hasRoleBased = roadmap.categories.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.ROLE_BASED);
+    
+    // Skill-based takes precedence
+    if (hasSkillBased) return SPECIAL_CATEGORIES.SKILL_BASED;
+    if (hasRoleBased) return SPECIAL_CATEGORIES.ROLE_BASED;
+    
+    return SPECIAL_CATEGORIES.SKILL_BASED; // Default
+  };
+
+  // Helper function to update special category
+  const updateSpecialCategory = async (newSpecialCategory: string) => {
+    if (!roadmap) return;
+    
+    setSaving(true);
+    setError('');
+    try {
+      // Get current non-special categories
+      const currentCategoryIds = extractCategoryIds(roadmap.categories || []);
+      const nonSpecialCategoryIds = currentCategoryIds.filter(id => 
+        id !== SPECIAL_CATEGORIES.SKILL_BASED && 
+        id !== SPECIAL_CATEGORIES.ROLE_BASED
+      );
+      
+      // Add the new special category
+      const newCategoryIds = [...nonSpecialCategoryIds, newSpecialCategory];
+      
+      const updated = await roadmapAPI.update(roadmap._id, {
+        name: roadmap.name,
+        roadmap: roadmap.roadmap,
+        description: roadmap.description,
+        category_ids: newCategoryIds
+      });
+      setRoadmap(updated);
+      setSelectedSpecialCategory(newSpecialCategory);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to update roadmap type';
+      setError(String(errorMessage));
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Load roadmap details
@@ -78,6 +134,20 @@ const RoadmapDetail = () => {
       
 
       setSelectedCategoryIds(categoryIds);
+      
+      // Set the current special category
+      const currentSpecialCategory = (() => {
+        const hasSkillBased = response.categories?.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.SKILL_BASED);
+        const hasRoleBased = response.categories?.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.ROLE_BASED);
+        
+        // Skill-based takes precedence
+        if (hasSkillBased) return SPECIAL_CATEGORIES.SKILL_BASED;
+        if (hasRoleBased) return SPECIAL_CATEGORIES.ROLE_BASED;
+        
+        return SPECIAL_CATEGORIES.SKILL_BASED; // Default
+      })();
+      setSelectedSpecialCategory(currentSpecialCategory);
+      
     } catch (err: any) {
       const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to load roadmap';
       setError(String(errorMessage));
@@ -431,9 +501,15 @@ const RoadmapDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black py-8 relative overflow-hidden">
+        {/* Background - minimal pulsing lights */}
         <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-          <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+          <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+          <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
         </div>
+
+        {/* Very subtle static grid */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+
         <div className="max-w-4xl mx-auto px-4 relative z-10">
           <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md border border-neutral-700/20 p-8">
             <div className="text-center">
@@ -452,9 +528,15 @@ const RoadmapDetail = () => {
   if (error || !roadmap) {
     return (
       <div className="min-h-screen bg-black py-8 relative overflow-hidden">
+        {/* Background - minimal pulsing lights */}
         <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-          <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+          <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+          <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
         </div>
+
+        {/* Very subtle static grid */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+
         <div className="max-w-4xl mx-auto px-4 relative z-10">
           <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md border border-neutral-700/20 p-8">
             <div className="text-center">
@@ -476,10 +558,14 @@ const RoadmapDetail = () => {
   // Main view
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* Background animations */}
+      {/* Background - minimal pulsing lights */}
       <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-        <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+        <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+        <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
       </div>
+
+      {/* Very subtle static grid */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
       {/* Header */}
       <div className="relative z-10 bg-neutral-900/40 backdrop-blur-md border-b border-neutral-700/20">
@@ -570,6 +656,42 @@ const RoadmapDetail = () => {
             )}
           </div>
 
+          {/* Roadmap Type (Special Category) */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-semibold text-white">Roadmap Type</h2>
+            </div>
+            
+            {isEditMode ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedSpecialCategory}
+                  onChange={(e) => updateSpecialCategory(e.target.value)}
+                  disabled={saving}
+                  className="w-full md:w-auto px-4 py-2 bg-neutral-800/50 border border-neutral-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
+                  <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
+                </select>
+                <p className="text-xs text-neutral-400">
+                  Choose whether this roadmap is skill-focused or role-experience focused
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                {getCurrentSpecialCategory() === SPECIAL_CATEGORIES.SKILL_BASED ? (
+                  <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded-full text-sm font-medium">
+                    Skill Based
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-purple-500/20 border border-purple-400/30 text-purple-300 rounded-full text-sm font-medium">
+                    Role Based
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Categories */}
           <div className="mt-4">
             <div className="flex items-center justify-between mb-3">
@@ -577,7 +699,13 @@ const RoadmapDetail = () => {
             </div>
             
             <div className="flex flex-wrap gap-2 items-center">
-              {roadmap.categories && roadmap.categories.length > 0 && roadmap.categories.map((category) => {
+              {roadmap.categories && roadmap.categories.filter(category => {
+                const categoryId = getCategoryId(category);
+                // Filter out special categories and invalid IDs
+                return categoryId && 
+                       categoryId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                       categoryId !== SPECIAL_CATEGORIES.ROLE_BASED;
+              }).map((category) => {
                 const categoryId = getCategoryId(category);
                 if (!categoryId) return null; // Skip categories without valid IDs
                 

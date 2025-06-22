@@ -5,6 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 type ViewMode = 'view' | 'edit';
 
+// Special category IDs that should be handled separately
+const SPECIAL_CATEGORIES = {
+  ROLE_BASED: '5717636e-6ff0-4a91-9cdb-678309c69514',
+  SKILL_BASED: 'f8f2a743-2db7-4fc2-a77f-8ae7c2a8d99c'
+} as const;
+
 const GuidanceAgentDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -24,6 +30,9 @@ const GuidanceAgentDetail = () => {
   const [editedLink, setEditedLink] = useState('');
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState<string>('');
+  
+  // Special category selection for edit mode
+  const [selectedSpecialCategory, setSelectedSpecialCategory] = useState<string>(SPECIAL_CATEGORIES.SKILL_BASED);
   
   // Category management
   const [showCategoryInput, setShowCategoryInput] = useState(false);
@@ -46,6 +55,53 @@ const GuidanceAgentDetail = () => {
     return categories?.map(cat => getCategoryId(cat)).filter((id): id is string => id !== undefined && id !== null && id !== '') || [];
   };
 
+  // Helper function to get current special category
+  const getCurrentSpecialCategory = (): string => {
+    if (!agent?.categories) return SPECIAL_CATEGORIES.SKILL_BASED;
+    
+    const hasSkillBased = agent.categories.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.SKILL_BASED);
+    const hasRoleBased = agent.categories.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.ROLE_BASED);
+    
+    // Skill-based takes precedence
+    if (hasSkillBased) return SPECIAL_CATEGORIES.SKILL_BASED;
+    if (hasRoleBased) return SPECIAL_CATEGORIES.ROLE_BASED;
+    
+    return SPECIAL_CATEGORIES.SKILL_BASED; // Default
+  };
+
+  // Helper function to update special category
+  const updateSpecialCategory = async (newSpecialCategory: string) => {
+    if (!agent) return;
+    
+    setSaving(true);
+    setError('');
+    try {
+      // Get current non-special categories
+      const currentCategoryIds = extractCategoryIds(agent.categories || []);
+      const nonSpecialCategoryIds = currentCategoryIds.filter(id => 
+        id !== SPECIAL_CATEGORIES.SKILL_BASED && 
+        id !== SPECIAL_CATEGORIES.ROLE_BASED
+      );
+      
+      // Add the new special category
+      const newCategoryIds = [...nonSpecialCategoryIds, newSpecialCategory];
+      
+      const updated = await guidanceAgentAPI.update(agent._id, {
+        name: agent.name,
+        description: agent.description,
+        link: agent.link,
+        category_ids: newCategoryIds
+      });
+      setAgent(updated);
+      setSelectedSpecialCategory(newSpecialCategory);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.detail || err?.message || 'Failed to update agent type';
+      setError(String(errorMessage));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Load agent
   const loadAgent = async () => {
     if (!id) return;
@@ -58,6 +114,20 @@ const GuidanceAgentDetail = () => {
       setEditedName(data.name);
       setEditedDescription(data.description);
       setEditedLink(data.link);
+      
+      // Set the current special category
+      const currentSpecialCategory = (() => {
+        const hasSkillBased = data.categories?.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.SKILL_BASED);
+        const hasRoleBased = data.categories?.some(cat => getCategoryId(cat) === SPECIAL_CATEGORIES.ROLE_BASED);
+        
+        // Skill-based takes precedence
+        if (hasSkillBased) return SPECIAL_CATEGORIES.SKILL_BASED;
+        if (hasRoleBased) return SPECIAL_CATEGORIES.ROLE_BASED;
+        
+        return SPECIAL_CATEGORIES.SKILL_BASED; // Default
+      })();
+      setSelectedSpecialCategory(currentSpecialCategory);
+      
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load guidance agent');
     } finally {
@@ -374,9 +444,15 @@ const GuidanceAgentDetail = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-black py-8 relative overflow-hidden">
+        {/* Background - minimal pulsing lights */}
         <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-          <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+          <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+          <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
         </div>
+
+        {/* Very subtle static grid */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+
         <div className="max-w-4xl mx-auto px-4 relative z-10">
           <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md border border-neutral-700/20 p-8">
             <div className="text-center">
@@ -394,9 +470,15 @@ const GuidanceAgentDetail = () => {
   if (error && !agent) {
     return (
       <div className="min-h-screen bg-black py-8 relative overflow-hidden">
+        {/* Background - minimal pulsing lights */}
         <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-          <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+          <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+          <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
         </div>
+
+        {/* Very subtle static grid */}
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+
         <div className="max-w-4xl mx-auto px-4 relative z-10">
           <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md border border-neutral-700/20 p-8">
             <div className="text-center">
@@ -423,60 +505,14 @@ const GuidanceAgentDetail = () => {
 
   return (
     <div className="min-h-screen bg-black py-8 relative overflow-hidden">
-      {/* Background elements (same as PersonalizedGuidance) */}
+      {/* Background - minimal pulsing lights */}
       <div className="absolute inset-0 opacity-3" style={{ filter: 'blur(2px)' }}>
-        <div className="absolute inset-0 bg-grid-pattern animate-grid-move"></div>
+        <div className="absolute top-1/3 left-1/3 w-32 h-32 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(60px)' }}></div>
+        <div className="absolute bottom-1/3 right-1/3 w-24 h-24 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(40px)' }}></div>
       </div>
 
-      <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(100px)' }}>
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-green-400 rounded-full animate-float"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
-              opacity: 0.3,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(3px)' }}>
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 rounded-full animate-float-slow"
-            style={{
-              backgroundColor: '#39FF14',
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 8}s`,
-              animationDuration: `${8 + Math.random() * 6}s`,
-              opacity: 0.2,
-            }}
-          />
-        ))}
-      </div>
-
-      <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(5px)' }}>
-        <div className="absolute top-0 left-1/4 w-px h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-beam opacity-10"></div>
-        <div className="absolute top-0 right-1/3 w-px h-full bg-gradient-to-b from-transparent via-green-400 to-transparent animate-beam-delayed opacity-10"></div>
-        <div className="absolute left-0 top-1/3 w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-beam-horizontal opacity-10"></div>
-      </div>
-
-      <div className="absolute inset-0 opacity-8" style={{ filter: 'blur(4px)' }}>
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full animate-pulse-glow" style={{ backgroundColor: '#39FF14', filter: 'blur(120px)' }}></div>
-        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full animate-pulse-glow delay-1000" style={{ backgroundColor: '#39FF14', filter: 'blur(100px)' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-48 h-48 rounded-full animate-pulse-glow delay-500" style={{ backgroundColor: '#39FF14', filter: 'blur(80px)', transform: 'translate(-50%, -50%)' }}></div>
-      </div>
-
-      <div className="absolute inset-0 pointer-events-none" style={{ filter: 'blur(10px)' }}>
-        <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan opacity-15"></div>
-        <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan-reverse opacity-15" style={{ top: '60%' }}></div>
-      </div>
+      {/* Very subtle static grid */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
 
       <div className="max-w-4xl mx-auto px-4 relative z-10">
         {/* Header */}
@@ -722,6 +758,42 @@ const GuidanceAgentDetail = () => {
             </div>
           </div>
 
+          {/* Agent Type (Special Category) */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-semibold text-white">Agent Type</h2>
+            </div>
+            
+            {viewMode === 'edit' ? (
+              <div className="space-y-2">
+                <select
+                  value={selectedSpecialCategory}
+                  onChange={(e) => updateSpecialCategory(e.target.value)}
+                  disabled={saving}
+                  className="w-full md:w-auto px-4 py-2 bg-neutral-800/50 border border-neutral-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                >
+                  <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
+                  <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
+                </select>
+                <p className="text-xs text-neutral-400">
+                  Choose whether this agent is skill-focused or role-experience focused
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                {getCurrentSpecialCategory() === SPECIAL_CATEGORIES.SKILL_BASED ? (
+                  <span className="px-3 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded-full text-sm font-medium">
+                    Skill Based
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-purple-500/20 border border-purple-400/30 text-purple-300 rounded-full text-sm font-medium">
+                    Role Based
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Categories Section */}
           <div className="mb-6">
             <div className="flex items-center space-x-2 mb-3">
@@ -729,7 +801,13 @@ const GuidanceAgentDetail = () => {
             </div>
             
             <div className="flex flex-wrap items-center gap-2">
-              {agent.categories?.map((category) => {
+              {agent.categories?.filter(category => {
+                const categoryId = getCategoryId(category);
+                // Filter out special categories and invalid IDs
+                return categoryId && 
+                       categoryId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                       categoryId !== SPECIAL_CATEGORIES.ROLE_BASED;
+              }).map((category) => {
                 const categoryId = getCategoryId(category);
                 if (!categoryId) return null;
                 

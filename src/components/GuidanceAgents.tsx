@@ -5,6 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 type ViewMode = 'list' | 'create' | 'edit';
 
+// Special category IDs that should be handled separately
+const SPECIAL_CATEGORIES = {
+  ROLE_BASED: '5717636e-6ff0-4a91-9cdb-678309c69514',
+  SKILL_BASED: 'f8f2a743-2db7-4fc2-a77f-8ae7c2a8d99c'
+} as const;
+
 interface GuidanceAgentFormData {
   name: string;
   description: string;
@@ -15,6 +21,8 @@ interface GuidanceAgentFormData {
 const GuidanceAgents: React.FC = () => {
   const navigate = useNavigate();
   const [agents, setAgents] = useState<GuidanceAgentResponse[]>([]);
+  const [roleBasedAgents, setRoleBasedAgents] = useState<GuidanceAgentResponse[]>([]);
+  const [skillBasedAgents, setSkillBasedAgents] = useState<GuidanceAgentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -44,22 +52,92 @@ const GuidanceAgents: React.FC = () => {
   const categoryInputRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<number | undefined>(undefined);
   
+  // Special category selection for create/edit
+  const [selectedSpecialCategory, setSelectedSpecialCategory] = useState<string>(SPECIAL_CATEGORIES.SKILL_BASED);
+  
+  // Add state for showing all items in each section
+  const [showAllSkillBased, setShowAllSkillBased] = useState(false);
+  const [showAllRoleBased, setShowAllRoleBased] = useState(false);
+  
   const { user } = useAuth();
   const isAdmin = user?.user_role === 'admin';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper functions
+  // Helper function to get category ID (handles both _id and id properties)
   const getCategoryId = (category: any): string | undefined => {
     return category._id || category.id;
   };
 
+  // Helper function to truncate description to 40 characters
+  const truncateDescription = (description: string, limit: number = 40): string => {
+    if (description.length <= limit) return description;
+    return description.substring(0, limit) + '...';
+  };
 
-  // Load agents
+  // Helper function to check if an agent belongs to a special category
+  const hasSpecialCategory = (agent: GuidanceAgentResponse, categoryId: string): boolean => {
+    return agent.categories?.some(cat => {
+      const catId = getCategoryId(cat);
+      return catId === categoryId;
+    }) || false;
+  };
+
+  // Helper function to get the primary special category (skill-based takes precedence)
+  const getPrimarySpecialCategory = (agent: GuidanceAgentResponse): string | null => {
+    if (hasSpecialCategory(agent, SPECIAL_CATEGORIES.SKILL_BASED)) {
+      return SPECIAL_CATEGORIES.SKILL_BASED;
+    }
+    if (hasSpecialCategory(agent, SPECIAL_CATEGORIES.ROLE_BASED)) {
+      return SPECIAL_CATEGORIES.ROLE_BASED;
+    }
+    return null;
+  };
+
+  // Load agents and categorize them
   const loadAgents = async (page: number = 1, search?: string, categoryId?: string) => {
     try {
       setLoading(true);
-      const response = await guidanceAgentAPI.getAll(page, 10, search, categoryId);
-      setAgents(response.items);
+      // Load more items to ensure we have enough for each section
+      const response = await guidanceAgentAPI.getAll(page, 50, search, categoryId);
+      const allAgents = response.items;
+      
+      // Categorize agents
+      const roleBased: GuidanceAgentResponse[] = [];
+      const skillBased: GuidanceAgentResponse[] = [];
+      
+      allAgents.forEach(agent => {
+        const primaryCategory = getPrimarySpecialCategory(agent);
+        if (primaryCategory === SPECIAL_CATEGORIES.SKILL_BASED) {
+          skillBased.push(agent);
+        } else if (primaryCategory === SPECIAL_CATEGORIES.ROLE_BASED) {
+          roleBased.push(agent);
+        } else {
+          // For agents without special categories, assign to skill-based as default
+          skillBased.push(agent);
+        }
+      });
+      
+      // Ensure minimum 6 items per section by redistributing if needed
+      const minItemsPerSection = 6;
+      
+      // If one section has fewer than 6, try to balance
+      if (roleBased.length < minItemsPerSection && skillBased.length > minItemsPerSection) {
+        const toMove = Math.min(minItemsPerSection - roleBased.length, skillBased.length - minItemsPerSection);
+        for (let i = 0; i < toMove; i++) {
+          const item = skillBased.pop();
+          if (item) roleBased.push(item);
+        }
+      } else if (skillBased.length < minItemsPerSection && roleBased.length > minItemsPerSection) {
+        const toMove = Math.min(minItemsPerSection - skillBased.length, roleBased.length - minItemsPerSection);
+        for (let i = 0; i < toMove; i++) {
+          const item = roleBased.pop();
+          if (item) skillBased.push(item);
+        }
+      }
+      
+      setRoleBasedAgents(roleBased);
+      setSkillBasedAgents(skillBased);
+      setAgents(allAgents); // Keep original for legacy compatibility
       setTotalPages(response.total_pages);
       setCurrentPage(response.page);
     } catch (err: any) {
@@ -69,11 +147,17 @@ const GuidanceAgents: React.FC = () => {
     }
   };
 
-  // Load categories
+  // Load categories (excluding special categories)
   const loadCategories = async () => {
     try {
       const response = await categoryAPI.getAll(1, 100);
-      setCategories(response.items);
+      // Filter out special categories from the dropdown
+      const filteredCategories = response.items.filter(cat => {
+        const catId = getCategoryId(cat);
+        return catId !== SPECIAL_CATEGORIES.ROLE_BASED && 
+               catId !== SPECIAL_CATEGORIES.SKILL_BASED;
+      });
+      setCategories(filteredCategories);
     } catch (err) {
       console.error('Failed to load categories:', err);
     }
@@ -231,14 +315,21 @@ const GuidanceAgents: React.FC = () => {
       setLoading(true);
       setError('');
 
+      // Include the selected special category in the form data
+      const submissionData = {
+        ...formData,
+        category_ids: [...formData.category_ids, selectedSpecialCategory]
+      };
+
       if (viewMode === 'create') {
-        await guidanceAgentAPI.create(formData, profilePic || undefined);
+        await guidanceAgentAPI.create(submissionData, profilePic || undefined);
       } else if (viewMode === 'edit' && editingAgent) {
-        await guidanceAgentAPI.update(editingAgent._id, formData, profilePic || undefined);
+        await guidanceAgentAPI.update(editingAgent._id, submissionData, profilePic || undefined);
       }
 
       // Reset form and go back to list
       setFormData({ name: '', description: '', link: '', category_ids: [] });
+      setSelectedSpecialCategory(SPECIAL_CATEGORIES.SKILL_BASED); // Reset to default
       setProfilePic(null);
       setProfilePicPreview('');
       setEditingAgent(null);
@@ -253,12 +344,26 @@ const GuidanceAgents: React.FC = () => {
 
   // Handle edit
   const handleEdit = (agent: GuidanceAgentResponse) => {
+    // Filter out special categories from the regular category IDs
+    const regularCategoryIds = agent.categories
+      .filter(cat => {
+        const catId = getCategoryId(cat);
+        return catId !== SPECIAL_CATEGORIES.SKILL_BASED && catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+      })
+      .map(cat => getCategoryId(cat))
+      .filter((id): id is string => id !== undefined);
+    
     setFormData({
       name: agent.name,
       description: agent.description,
       link: agent.link,
-      category_ids: agent.categories.map(cat => cat._id)
+      category_ids: regularCategoryIds
     });
+    
+    // Set the current special category
+    const currentSpecialCategory = getPrimarySpecialCategory(agent) || SPECIAL_CATEGORIES.SKILL_BASED;
+    setSelectedSpecialCategory(currentSpecialCategory);
+    
     setEditingAgent(agent);
     setProfilePicPreview(agent.profile_pic ? `data:image/jpeg;base64,${agent.profile_pic}` : '');
     setViewMode('edit');
@@ -419,6 +524,25 @@ const GuidanceAgents: React.FC = () => {
             </div>
           </div>
 
+          {/* Agent Type (Special Category) */}
+          <div>
+            <label className="block text-sm font-medium text-neutral-300 mb-2">
+              Agent Type *
+            </label>
+            <select
+              value={selectedSpecialCategory}
+              onChange={(e) => setSelectedSpecialCategory(e.target.value)}
+              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400"
+              required
+            >
+              <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
+              <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
+            </select>
+            <p className="text-xs text-neutral-400 mt-1">
+              Choose whether this agent is skill-focused or role-experience focused
+            </p>
+          </div>
+
           {/* Categories Section - like roadmaps */}
           <div>
             <label className="block text-sm font-medium text-neutral-300 mb-2">
@@ -577,14 +701,14 @@ const GuidanceAgents: React.FC = () => {
   // List View
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Guidance Agents</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-white">Guidance Agents</h2>
         {isAdmin && (
           <button
             onClick={() => setViewMode('create')}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 w-full sm:w-auto"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 sm:w-5 h-4 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
             <span>Add Agent</span>
@@ -612,19 +736,37 @@ const GuidanceAgents: React.FC = () => {
           </div>
         </form>
         
-        <div className="w-full">
-          <select
-            value={selectedCategoryId}
-            onChange={(e) => handleCategoryFilter(e.target.value)}
-            className="w-full px-3 sm:px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400 text-sm sm:text-base"
-          >
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category._id} value={category._id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 sm:max-w-xs">
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => handleCategoryFilter(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400 text-sm sm:text-base"
+            >
+              <option value="">All Categories</option>
+              {categories.map(category => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {(searchTerm || selectedCategoryId) && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategoryId('');
+                loadAgents(1);
+              }}
+              className="px-4 py-2 bg-neutral-700 text-white rounded-lg hover:bg-neutral-600 transition-colors flex items-center justify-center space-x-2 text-sm sm:text-base sm:w-auto"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <span>Clear Filters</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -637,132 +779,358 @@ const GuidanceAgents: React.FC = () => {
       {loading ? (
         <div className="text-center py-8">
           <div className="inline-flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b border-green-400"></div>
             <span className="text-neutral-300 text-lg">Loading agents...</span>
           </div>
         </div>
       ) : agents.length === 0 ? (
         <div className="text-center py-12">
-          <svg className="w-16 h-16 mx-auto mb-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-12 sm:w-16 h-12 sm:h-16 mx-auto mb-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <p className="text-neutral-400 text-xl mb-4">No guidance agents found</p>
+          <p className="text-neutral-400 text-lg sm:text-xl mb-4">No guidance agents found</p>
           {isAdmin && (
             <button
               onClick={() => setViewMode('create')}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="px-4 sm:px-6 py-2 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
             >
               Create Your First Agent
             </button>
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {agents.map(agent => (
-            <div key={agent._id} className="bg-neutral-900/60 backdrop-blur-md border border-neutral-700/50 rounded-lg p-6 hover:border-green-400/30 transition-colors">
-              <div 
-                className="flex items-start space-x-4 mb-4 cursor-pointer"
-                onClick={() => viewAgent(agent)}
-              >
-                {agent.profile_pic ? (
-                  <img
-                    src={`data:image/jpeg;base64,${agent.profile_pic}`}
-                    alt={agent.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-neutral-700 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-1 hover:text-green-300 transition-colors">{agent.name}</h3>
-                  <p className="text-neutral-400 text-sm line-clamp-2">{agent.description}</p>
-                </div>
-              </div>
-
-              {agent.categories.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {agent.categories.map(category => (
-                    <span
-                      key={category._id}
-                      className="px-2 py-1 bg-green-400/20 text-green-300 text-xs rounded-full"
-                    >
-                      {category.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <a
-                  href={agent.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                >
-                  <span>Visit</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-
-                {isAdmin && (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(agent);
-                      }}
-                      className="p-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-                      title="Edit Agent"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(agent);
-                      }}
-                      className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      title="Delete Agent"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+        <>
+          {/* Skill-Based Agents Section */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-8 bg-blue-500 rounded-full"></div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Skill-Based Agents</h2>
+                <span className="px-2 sm:px-3 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded-full text-xs sm:text-sm">
+                  {skillBasedAgents.length} agents
+                </span>
               </div>
             </div>
-          ))}
-        </div>
+            
+            {skillBasedAgents.length === 0 ? (
+              <div className="text-center py-8 bg-neutral-800/20 rounded-lg border border-neutral-700/30">
+                <p className="text-neutral-400">No skill-based agents available yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {skillBasedAgents.slice(0, showAllSkillBased ? skillBasedAgents.length : 6).map(agent => (
+                  <div 
+                    key={`skill-${agent._id}`} 
+                    className="bg-neutral-900/60 backdrop-blur-md border border-blue-400/30 rounded-lg p-4 sm:p-6 hover:border-blue-400/70 transition-all duration-300 hover:scale-105 hover:shadow-xl group"
+                    style={{ 
+                      boxShadow: '0 4px 20px rgba(59, 130, 246, 0.1)',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {/* Type indicator */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="px-2 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded text-xs font-medium">
+                        Skill-Based
+                      </span>
+                    </div>
+                    
+                    <div 
+                      className="flex items-start space-x-4 mb-4 cursor-pointer"
+                      onClick={() => viewAgent(agent)}
+                    >
+                      {agent.profile_pic ? (
+                        <img
+                          src={`data:image/jpeg;base64,${agent.profile_pic}`}
+                          alt={agent.name}
+                          className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 sm:w-6 h-5 sm:h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors line-clamp-2">{agent.name}</h3>
+                        <p className="text-neutral-400 text-sm">
+                          {truncateDescription(agent.description)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Categories (excluding special categories) */}
+                    {agent.categories.filter(cat => {
+                      const catId = getCategoryId(cat);
+                      return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                             catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                    }).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {agent.categories.filter(cat => {
+                          const catId = getCategoryId(cat);
+                          return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                 catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                        }).slice(0, 2).map(category => (
+                          <span
+                            key={getCategoryId(category)}
+                            className="px-2 py-1 bg-green-400/20 text-green-300 text-xs rounded-full"
+                          >
+                            {category.name}
+                          </span>
+                        ))}
+                        {agent.categories.filter(cat => {
+                          const catId = getCategoryId(cat);
+                          return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                 catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                        }).length > 2 && (
+                          <span className="px-2 py-1 bg-neutral-600/20 border border-neutral-400/30 text-neutral-400 rounded text-xs">
+                            +{agent.categories.filter(cat => {
+                              const catId = getCategoryId(cat);
+                              return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                     catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                            }).length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <a
+                        href={agent.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm"
+                      >
+                        <span>Visit</span>
+                        <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+
+                      {isAdmin && (
+                        <div className="flex space-x-1 sm:space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(agent);
+                            }}
+                            className="p-1.5 sm:p-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                            title="Edit Agent"
+                          >
+                            <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(agent);
+                            }}
+                            className="p-1.5 sm:p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            title="Delete Agent"
+                          >
+                            <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Show more button for skill-based */}
+            {skillBasedAgents.length > 6 && (
+              <div className="text-center mt-6">
+                <button 
+                  onClick={() => setShowAllSkillBased(!showAllSkillBased)}
+                  className="px-4 sm:px-6 py-2 bg-blue-600/20 border border-blue-400/30 text-blue-300 rounded-lg hover:bg-blue-600/30 transition-colors text-sm sm:text-base"
+                >
+                  {showAllSkillBased ? 'Show Less' : `View All ${skillBasedAgents.length} Skill-Based Agents`}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Role-Based Agents Section */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-8 bg-purple-500 rounded-full"></div>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Role-Based Agents</h2>
+                <span className="px-2 sm:px-3 py-1 bg-purple-500/20 border border-purple-400/30 text-purple-300 rounded-full text-xs sm:text-sm">
+                  {roleBasedAgents.length} agents
+                </span>
+              </div>
+            </div>
+            
+            {roleBasedAgents.length === 0 ? (
+              <div className="text-center py-8 bg-neutral-800/20 rounded-lg border border-neutral-700/30">
+                <p className="text-neutral-400">No role-based agents available yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {roleBasedAgents.slice(0, showAllRoleBased ? roleBasedAgents.length : 6).map(agent => (
+                  <div 
+                    key={`role-${agent._id}`} 
+                    className="bg-neutral-900/60 backdrop-blur-md border border-purple-400/30 rounded-lg p-4 sm:p-6 hover:border-purple-400/70 transition-all duration-300 hover:scale-105 hover:shadow-xl group"
+                    style={{ 
+                      boxShadow: '0 4px 20px rgba(168, 85, 247, 0.1)',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {/* Type indicator */}
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="px-2 py-1 bg-purple-500/20 border border-purple-400/30 text-purple-300 rounded text-xs font-medium">
+                        Role-Based
+                      </span>
+                    </div>
+                    
+                    <div 
+                      className="flex items-start space-x-4 mb-4 cursor-pointer"
+                      onClick={() => viewAgent(agent)}
+                    >
+                      {agent.profile_pic ? (
+                        <img
+                          src={`data:image/jpeg;base64,${agent.profile_pic}`}
+                          alt={agent.name}
+                          className="w-10 sm:w-12 h-10 sm:h-12 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 sm:w-12 h-10 sm:h-12 rounded-full bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 sm:w-6 h-5 sm:h-6 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-white mb-1 group-hover:text-purple-400 transition-colors line-clamp-2">{agent.name}</h3>
+                        <p className="text-neutral-400 text-sm">
+                          {truncateDescription(agent.description)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Categories (excluding special categories) */}
+                    {agent.categories.filter(cat => {
+                      const catId = getCategoryId(cat);
+                      return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                             catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                    }).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {agent.categories.filter(cat => {
+                          const catId = getCategoryId(cat);
+                          return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                 catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                        }).slice(0, 2).map(category => (
+                          <span
+                            key={getCategoryId(category)}
+                            className="px-2 py-1 bg-green-400/20 text-green-300 text-xs rounded-full"
+                          >
+                            {category.name}
+                          </span>
+                        ))}
+                        {agent.categories.filter(cat => {
+                          const catId = getCategoryId(cat);
+                          return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                 catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                        }).length > 2 && (
+                          <span className="px-2 py-1 bg-neutral-600/20 border border-neutral-400/30 text-neutral-400 rounded text-xs">
+                            +{agent.categories.filter(cat => {
+                              const catId = getCategoryId(cat);
+                              return catId !== SPECIAL_CATEGORIES.SKILL_BASED && 
+                                     catId !== SPECIAL_CATEGORIES.ROLE_BASED;
+                            }).length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <a
+                        href={agent.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-sm"
+                      >
+                        <span>Visit</span>
+                        <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+
+                      {isAdmin && (
+                        <div className="flex space-x-1 sm:space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(agent);
+                            }}
+                            className="p-1.5 sm:p-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                            title="Edit Agent"
+                          >
+                            <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(agent);
+                            }}
+                            className="p-1.5 sm:p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            title="Delete Agent"
+                          >
+                            <svg className="w-3 sm:w-4 h-3 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Show more button for role-based */}
+            {roleBasedAgents.length > 6 && (
+              <div className="text-center mt-6">
+                <button 
+                  onClick={() => setShowAllRoleBased(!showAllRoleBased)}
+                  className="px-4 sm:px-6 py-2 bg-purple-600/20 border border-purple-400/30 text-purple-300 rounded-lg hover:bg-purple-600/30 transition-colors text-sm sm:text-base"
+                >
+                  {showAllRoleBased ? 'Show Less' : `View All ${roleBasedAgents.length} Role-Based Agents`}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2">
+        <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-2">
           <button
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             Previous
           </button>
           
-          <div className="flex space-x-2">
+          <div className="flex space-x-1 sm:space-x-2 overflow-x-auto pb-2 sm:pb-0">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const page = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
               return (
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm sm:text-base flex-shrink-0 ${
                     page === currentPage
                       ? 'bg-green-600 text-white'
                       : 'bg-neutral-800 text-white hover:bg-neutral-700'
@@ -777,7 +1145,7 @@ const GuidanceAgents: React.FC = () => {
           <button
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
           >
             Next
           </button>
