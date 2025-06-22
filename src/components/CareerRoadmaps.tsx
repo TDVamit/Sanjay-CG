@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { roadmapAPI, categoryAPI, type RoadmapListItem, type RoadmapRequest, type CategoryResponse } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import CustomDropdown from './CustomDropdown';
 
 type ViewMode = 'list' | 'create';
 
@@ -318,16 +319,16 @@ const CareerRoadmaps = () => {
                 {/* Special Category Selection */}
                 <div>
                   <label className="block text-sm font-medium text-neutral-200 mb-2">Roadmap Type</label>
-                  <select
+                  <CustomDropdown
                     value={selectedSpecialCategory}
-                    onChange={(e) => setSelectedSpecialCategory(e.target.value)}
-                    className="w-full px-4 py-3 bg-neutral-800/30 backdrop-blur-sm border border-neutral-600/30 rounded-lg text-white focus:outline-none focus:ring-2 transition-all"
-                    style={{ '--tw-ring-color': '#39FF14' } as React.CSSProperties}
-                    required
-                  >
-                    <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
-                    <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
-                  </select>
+                    onChange={(value) => setSelectedSpecialCategory(value)}
+                    options={[
+                      { value: SPECIAL_CATEGORIES.SKILL_BASED, label: 'Skill Based' },
+                      { value: SPECIAL_CATEGORIES.ROLE_BASED, label: 'Role Based' }
+                    ]}
+                    placeholder="Select roadmap type"
+                    className="w-full"
+                  />
                   <p className="text-xs text-neutral-400 mt-1">
                     Choose whether this roadmap is skill-focused or role-experience focused
                   </p>
@@ -441,20 +442,20 @@ const CareerRoadmaps = () => {
                 {/* Category Filter and Clear Button */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 sm:max-w-xs">
-                    <select
+                    <CustomDropdown
                       value={selectedCategoryId}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                      className="w-full px-4 py-2 sm:py-3 bg-neutral-800/30 backdrop-blur-sm border border-neutral-600/30 rounded-lg text-white focus:outline-none focus:ring-2 transition-all text-sm sm:text-base"
-                      style={{ '--tw-ring-color': '#39FF14' } as React.CSSProperties}
+                      onChange={handleCategoryChange}
+                      options={[
+                        { value: '', label: 'All Categories' },
+                        ...categories.map((category) => ({
+                          value: category._id,
+                          label: category.name
+                        }))
+                      ]}
+                      placeholder="All Categories"
+                      loading={loadingCategories}
                       disabled={loadingCategories}
-                    >
-                      <option value="">All Categories</option>
-                      {categories.map((category) => (
-                        <option key={category._id} value={category._id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   {/* Clear Filters Button */}

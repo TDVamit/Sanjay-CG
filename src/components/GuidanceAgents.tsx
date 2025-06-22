@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { guidanceAgentAPI, categoryAPI, type GuidanceAgentResponse, type CategoryResponse } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import CustomDropdown from './CustomDropdown';
 
 type ViewMode = 'list' | 'create' | 'edit';
 
@@ -16,6 +17,7 @@ interface GuidanceAgentFormData {
   description: string;
   link: string;
   category_ids: string[];
+  profile_pic?: File | null;
 }
 
 const GuidanceAgents: React.FC = () => {
@@ -30,7 +32,8 @@ const GuidanceAgents: React.FC = () => {
     name: '',
     description: '',
     link: '',
-    category_ids: []
+    category_ids: [],
+    profile_pic: undefined
   });
   const [editingAgent, setEditingAgent] = useState<GuidanceAgentResponse | null>(null);
   const [profilePic, setProfilePic] = useState<File | null>(null);
@@ -328,7 +331,7 @@ const GuidanceAgents: React.FC = () => {
       }
 
       // Reset form and go back to list
-      setFormData({ name: '', description: '', link: '', category_ids: [] });
+      setFormData({ name: '', description: '', link: '', category_ids: [], profile_pic: undefined });
       setSelectedSpecialCategory(SPECIAL_CATEGORIES.SKILL_BASED); // Reset to default
       setProfilePic(null);
       setProfilePicPreview('');
@@ -357,7 +360,8 @@ const GuidanceAgents: React.FC = () => {
       name: agent.name,
       description: agent.description,
       link: agent.link,
-      category_ids: regularCategoryIds
+      category_ids: regularCategoryIds,
+      profile_pic: undefined
     });
     
     // Set the current special category
@@ -419,7 +423,7 @@ const GuidanceAgents: React.FC = () => {
           <button
             onClick={() => {
               setViewMode('list');
-              setFormData({ name: '', description: '', link: '', category_ids: [] });
+              setFormData({ name: '', description: '', link: '', category_ids: [], profile_pic: undefined });
               setProfilePic(null);
               setProfilePicPreview('');
               setEditingAgent(null);
@@ -529,15 +533,16 @@ const GuidanceAgents: React.FC = () => {
             <label className="block text-sm font-medium text-neutral-300 mb-2">
               Agent Type *
             </label>
-            <select
+            <CustomDropdown
               value={selectedSpecialCategory}
-              onChange={(e) => setSelectedSpecialCategory(e.target.value)}
-              className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400"
-              required
-            >
-              <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
-              <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
-            </select>
+              onChange={(value) => setSelectedSpecialCategory(value)}
+              options={[
+                { value: SPECIAL_CATEGORIES.SKILL_BASED, label: 'Skill Based' },
+                { value: SPECIAL_CATEGORIES.ROLE_BASED, label: 'Role Based' }
+              ]}
+              placeholder="Select agent type"
+              className="w-full"
+            />
             <p className="text-xs text-neutral-400 mt-1">
               Choose whether this agent is skill-focused or role-experience focused
             </p>
@@ -683,7 +688,7 @@ const GuidanceAgents: React.FC = () => {
               type="button"
               onClick={() => {
                 setViewMode('list');
-                setFormData({ name: '', description: '', link: '', category_ids: [] });
+                setFormData({ name: '', description: '', link: '', category_ids: [], profile_pic: undefined });
                 setProfilePic(null);
                 setProfilePicPreview('');
                 setEditingAgent(null);
@@ -738,18 +743,20 @@ const GuidanceAgents: React.FC = () => {
         
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 sm:max-w-xs">
-            <select
+            <CustomDropdown
               value={selectedCategoryId}
-              onChange={(e) => handleCategoryFilter(e.target.value)}
-              className="w-full px-3 sm:px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-white focus:outline-none focus:border-green-400 text-sm sm:text-base"
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category._id} value={category._id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+              onChange={handleCategoryFilter}
+              options={[
+                { value: '', label: 'All Categories' },
+                ...categories.map(category => ({
+                  value: category._id,
+                  label: category.name
+                }))
+              ]}
+              placeholder="All Categories"
+              loading={loading}
+              disabled={loading}
+            />
           </div>
           
           {(searchTerm || selectedCategoryId) && (

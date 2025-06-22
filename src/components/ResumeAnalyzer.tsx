@@ -232,9 +232,9 @@ const ResumeAnalyzer = () => {
             </p>
 
             <div className="flex flex-col lg:flex-row gap-6">
-              {/* PDF Preview - Shows first on mobile, right side on desktop */}
+              {/* PDF Preview - Shows below analysis on mobile, right side on desktop */}
               {pdfUrl && (
-                <div className="w-full lg:w-1/3 lg:order-2">
+                <div className="w-full lg:w-1/3 lg:order-2 order-2">
                   <div className="bg-neutral-800/40 backdrop-blur-sm rounded-lg p-4 border border-neutral-600/30 h-full">
                     <h3 className="text-white font-medium mb-4 text-center">Uploaded Resume</h3>
                     
@@ -320,8 +320,8 @@ const ResumeAnalyzer = () => {
                 </div>
               )}
 
-              {/* Main Content - Upload/Results - Shows second on mobile, left side on desktop */}
-              <div className={`${pdfUrl ? 'w-full lg:w-2/3' : 'w-full'} lg:order-1 transition-all duration-300`}>
+              {/* Main Content - Upload/Results - Shows first on mobile, left side on desktop */}
+              <div className={`${pdfUrl ? 'w-full lg:w-2/3' : 'w-full'} lg:order-1 order-1 transition-all duration-300`}>
                 {/* Upload Section - Hidden during analysis and when results are shown */}
                 {!isUploading && !analysisResult && (
                   <div className="mb-8">

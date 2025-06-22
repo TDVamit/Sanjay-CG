@@ -4,6 +4,7 @@ import { roadmapAPI, tokenManager, categoryAPI, type RoadmapResponse, type Categ
 import RoadmapBuilder from './RoadmapBuilder';
 import RoadmapVisualization from './RoadmapVisualization';
 import { useAuth } from '../contexts/AuthContext';
+import CustomDropdown from './CustomDropdown';
 
 type ViewMode = 'view' | 'builder';
 
@@ -664,15 +665,17 @@ const RoadmapDetail = () => {
             
             {isEditMode ? (
               <div className="space-y-2">
-                <select
+                <CustomDropdown
                   value={selectedSpecialCategory}
-                  onChange={(e) => updateSpecialCategory(e.target.value)}
+                  onChange={(value) => updateSpecialCategory(value)}
+                  options={[
+                    { value: SPECIAL_CATEGORIES.SKILL_BASED, label: 'Skill Based' },
+                    { value: SPECIAL_CATEGORIES.ROLE_BASED, label: 'Role Based' }
+                  ]}
+                  placeholder="Select roadmap type"
                   disabled={saving}
-                  className="w-full md:w-auto px-4 py-2 bg-neutral-800/50 border border-neutral-600 rounded-lg text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
-                >
-                  <option value={SPECIAL_CATEGORIES.SKILL_BASED}>Skill Based</option>
-                  <option value={SPECIAL_CATEGORIES.ROLE_BASED}>Role Based</option>
-                </select>
+                  className="w-full md:w-auto"
+                />
                 <p className="text-xs text-neutral-400">
                   Choose whether this roadmap is skill-focused or role-experience focused
                 </p>
