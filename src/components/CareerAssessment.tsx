@@ -267,8 +267,6 @@ Use these specific job titles when possible: AI Engineer, Android Developer, Bac
     try {
       const response = await chatAPI.chat({ prompt });
       
-      console.log('Backend AI Response:', response.response);
-      console.log('Model Used:', response.model_used);
       
       const parsedResponse = parseJobResponse(response.response);
       
