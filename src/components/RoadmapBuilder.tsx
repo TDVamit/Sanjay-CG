@@ -133,7 +133,11 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         outer_label_direction: block.outer_label_direction,
         html_content: block.html_content,
         connected_blocks: block.connected_blocks,
-        connection_styles: block.connection_styles || {} // Preserve connection styles
+        connection_styles: block.connection_styles || {}, // Preserve connection styles
+        titleColor: block.titleColor, // Preserve title color
+        borderColor: block.borderColor, // Preserve border color
+        borderWidth: block.borderWidth, // Preserve border width
+        borderStyle: block.borderStyle // Preserve border style
       }))
     };
   };
@@ -1156,7 +1160,11 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         outer_label_direction: block.outer_label_direction,
         html_content: block.html_content,
         connected_blocks: block.connected_blocks,
-        connection_styles: block.connection_styles
+        connection_styles: block.connection_styles,
+        titleColor: block.titleColor,
+        borderColor: block.borderColor,
+        borderWidth: block.borderWidth,
+        borderStyle: block.borderStyle
       }))
     };
     onSave(JSON.stringify(convertedData));
@@ -1247,7 +1255,11 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
       outer_label_direction: block.outer_label_direction,
       html_content: block.html_content,
       connected_blocks: block.connected_blocks,
-      connection_styles: block.connection_styles
+      connection_styles: block.connection_styles,
+      titleColor: block.titleColor,
+      borderColor: block.borderColor,
+      borderWidth: block.borderWidth,
+      borderStyle: block.borderStyle
     }))
   }), []);
 
@@ -1290,7 +1302,11 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         outer_label_direction: block.outer_label_direction,
         html_content: block.html_content,
         connected_blocks: block.connected_blocks,
-        connection_styles: block.connection_styles
+        connection_styles: block.connection_styles,
+        titleColor: block.titleColor,
+        borderColor: block.borderColor,
+        borderWidth: block.borderWidth,
+        borderStyle: block.borderStyle
       }))
     };
     onSave(JSON.stringify(convertedData));
