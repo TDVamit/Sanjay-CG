@@ -56,7 +56,12 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
         outer_label_direction: block.outer_label_direction,
         html_content: block.html_content,
         connected_blocks: block.connected_blocks,
-        connection_styles: block.connection_styles || {}
+        connection_styles: block.connection_styles || {},
+        titleColor: block.titleColor,
+        borderColor: block.borderColor,
+        borderWidth: block.borderWidth,
+        borderStyle: block.borderStyle,
+        fontSize: block.fontSize
       }))
     };
   };
@@ -590,16 +595,19 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
                 height: block.height * scale,
                 backgroundColor: block.color,
                 borderRadius: '8px',
-                border: selectedBlock === block.block_id ? '3px solid #3B82F6' : '2px solid rgba(0,0,0,0.1)',
+                border: selectedBlock === block.block_id 
+                  ? '3px solid #3B82F6' 
+                  : `${block.borderWidth ?? 2}px ${block.borderStyle ?? 'solid'} ${block.borderColor ?? 'rgba(0,0,0,0.1)'}`,
                 zIndex: 10
               }}
               onClick={(e) => handleBlockClick(block.block_id, e)}
             >
               {/* Inner Label */}
               <div
-                className="absolute inset-2 flex items-center justify-center text-white font-semibold text-center overflow-hidden"
+                className="absolute inset-2 flex items-center justify-center font-semibold text-center overflow-hidden"
                 style={{
-                  fontSize: Math.max(12, 14 * scale),
+                  fontSize: block.fontSize ? `${block.fontSize * scale}px` : Math.max(12, 14 * scale),
+                  color: block.titleColor || '#ffffff',
                   textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                 }}
               >
@@ -623,6 +631,18 @@ const RoadmapVisualization: React.FC<RoadmapVisualizationProps> = ({
                       left: '50%',
                       transform: 'translateX(-50%)',
                       marginTop: '4px'
+                    }),
+                    ...(block.outer_label_direction === 'left' && {
+                      right: '100%',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      marginRight: '8px'
+                    }),
+                    ...(block.outer_label_direction === 'right' && {
+                      left: '100%',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      marginLeft: '8px'
                     })
                   }}
                 >

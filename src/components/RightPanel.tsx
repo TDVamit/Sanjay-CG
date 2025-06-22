@@ -102,14 +102,29 @@ const RightPanel: React.FC<RightPanelProps> = ({ block, onUpdate, onClose }) => 
                   className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   placeholder="Enter block title..."
                 />
-                <div className="mt-2 flex items-center space-x-2">
-                  <label className="text-xs text-gray-500">Title Color</label>
-                  <input
-                    type="color"
-                    value={block.titleColor || '#1F2937'}
-                    onChange={e => onUpdate({ titleColor: e.target.value })}
-                    className="w-8 h-8 border border-gray-300 rounded"
-                  />
+                <div className="mt-2 flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <label className="text-xs text-gray-500">Title Color</label>
+                    <input
+                      type="color"
+                      value={block.titleColor || '#ffffff'}
+                      onChange={e => onUpdate({ titleColor: e.target.value })}
+                      className="w-8 h-8 border border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-xs text-gray-500">Font Size</label>
+                    <input
+                      type="number"
+                      min="8"
+                      max="48"
+                      step="1"
+                      value={block.fontSize || 14}
+                      onChange={e => onUpdate({ fontSize: Math.max(8, Math.min(48, Number(e.target.value))) })}
+                      className="w-16 px-2 py-1 border border-gray-300 rounded text-sm"
+                    />
+                    <span className="text-xs text-gray-400">px</span>
+                  </div>
                 </div>
               </div>
 
@@ -172,12 +187,14 @@ const RightPanel: React.FC<RightPanelProps> = ({ block, onUpdate, onClose }) => 
                   <select
                     value={block.outer_label_direction}
                     onChange={(e) =>
-                      onUpdate({ outer_label_direction: e.target.value as 'up' | 'bottom' })
+                      onUpdate({ outer_label_direction: e.target.value as 'up' | 'bottom' | 'left' | 'right' })
                     }
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                     <option value="up">Show Above Block</option>
                     <option value="bottom">Show Below Block</option>
+                    <option value="left">Show Left of Block</option>
+                    <option value="right">Show Right of Block</option>
                   </select>
                 </div>
               </div>

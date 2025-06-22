@@ -114,6 +114,18 @@ const BlockComponent: React.FC<BlockComponentProps> = ({
                 left: '50%',
                 transform: 'translateX(-50%)',
                 marginTop: '4px'
+              }),
+              ...(block.outer_label_direction === 'left' && {
+                right: '100%',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                marginRight: '8px'
+              }),
+              ...(block.outer_label_direction === 'right' && {
+                left: '100%',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                marginLeft: '8px'
               })
             }}
           >
@@ -264,7 +276,7 @@ const BlockComponent: React.FC<BlockComponentProps> = ({
         {/* Inner label */}
         <span
           className="font-medium text-center px-4 select-none"
-          style={{ fontSize: Math.max(12, 14 * scale), lineHeight: '1.2', color: block.titleColor || '#fff' }}
+          style={{ fontSize: block.fontSize ? `${block.fontSize}px` : Math.max(12, 14 * scale), lineHeight: '1.2', color: block.titleColor || '#ffffff' }}
         >
           {block.inner_label}
         </span>

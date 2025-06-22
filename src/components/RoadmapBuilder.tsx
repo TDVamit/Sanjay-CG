@@ -137,7 +137,8 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         titleColor: block.titleColor, // Preserve title color
         borderColor: block.borderColor, // Preserve border color
         borderWidth: block.borderWidth, // Preserve border width
-        borderStyle: block.borderStyle // Preserve border style
+        borderStyle: block.borderStyle, // Preserve border style
+        fontSize: block.fontSize // Preserve font size
       }))
     };
   };
@@ -1164,7 +1165,8 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         titleColor: block.titleColor,
         borderColor: block.borderColor,
         borderWidth: block.borderWidth,
-        borderStyle: block.borderStyle
+        borderStyle: block.borderStyle,
+        fontSize: block.fontSize
       }))
     };
     onSave(JSON.stringify(convertedData));
@@ -1259,7 +1261,8 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
       titleColor: block.titleColor,
       borderColor: block.borderColor,
       borderWidth: block.borderWidth,
-      borderStyle: block.borderStyle
+      borderStyle: block.borderStyle,
+      fontSize: block.fontSize
     }))
   }), []);
 
@@ -1306,7 +1309,8 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
         titleColor: block.titleColor,
         borderColor: block.borderColor,
         borderWidth: block.borderWidth,
-        borderStyle: block.borderStyle
+        borderStyle: block.borderStyle,
+        fontSize: block.fontSize
       }))
     };
     onSave(JSON.stringify(convertedData));

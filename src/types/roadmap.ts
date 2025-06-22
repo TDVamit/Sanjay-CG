@@ -17,7 +17,7 @@ export interface RoadmapBlock {
   color: string;
   inner_label: string;
   outer_label: string;
-  outer_label_direction: 'up' | 'bottom';
+  outer_label_direction: 'up' | 'bottom' | 'left' | 'right';
   html_content: string;
   connected_blocks: { [key: string]: Direction | string };
   connection_styles?: { [key: string]: ConnectionStyle };
@@ -25,6 +25,7 @@ export interface RoadmapBlock {
   borderColor?: string;
   borderWidth?: number;
   borderStyle?: 'solid' | 'dashed' | 'dotted';
+  fontSize?: number; // Font size for the title/inner_label
 }
 
 export interface RoadmapData {

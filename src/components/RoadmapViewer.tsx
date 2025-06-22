@@ -34,7 +34,12 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
         if (block.x !== undefined && block.y !== undefined) {
           return {
             ...block,
-            connection_styles: block.connection_styles || {} // Ensure connection_styles exists
+            connection_styles: block.connection_styles || {}, // Ensure connection_styles exists
+            titleColor: block.titleColor, // Preserve title color
+            borderColor: block.borderColor, // Preserve border color
+            borderWidth: block.borderWidth, // Preserve border width
+            borderStyle: block.borderStyle, // Preserve border style
+            fontSize: block.fontSize // Preserve font size
           };
         }
         
@@ -51,7 +56,12 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
           outer_label_direction: block.outer_label_direction,
           html_content: block.html_content,
           connected_blocks: block.connected_blocks,
-          connection_styles: block.connection_styles || {} // Preserve connection styles
+          connection_styles: block.connection_styles || {}, // Preserve connection styles
+          titleColor: block.titleColor, // Preserve title color
+          borderColor: block.borderColor, // Preserve border color
+          borderWidth: block.borderWidth, // Preserve border width
+          borderStyle: block.borderStyle, // Preserve border style
+          fontSize: block.fontSize // Preserve font size
         };
       })
     };
@@ -377,12 +387,33 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
                 <div
                   className="absolute text-gray-700 text-sm font-medium pointer-events-none"
                   style={{
-                    left: block.x + offsetX,
-                    top: block.outer_label_direction === 'up' 
-                      ? block.y + offsetY - 25
-                      : block.y + block.height + offsetY + 5,
-                    width: block.width,
-                    textAlign: 'center'
+                    fontSize: Math.max(10, 12 * scale),
+                    ...(block.outer_label_direction === 'up' && {
+                      left: block.x + offsetX,
+                      top: block.y + offsetY - 25,
+                      width: block.width,
+                      textAlign: 'center'
+                    }),
+                    ...(block.outer_label_direction === 'bottom' && {
+                      left: block.x + offsetX,
+                      top: block.y + block.height + offsetY + 5,
+                      width: block.width,
+                      textAlign: 'center'
+                    }),
+                    ...(block.outer_label_direction === 'left' && {
+                      right: canvasWidth - (block.x + offsetX) + 8,
+                      top: block.y + offsetY + block.height / 2,
+                      transform: 'translateY(-50%)',
+                      textAlign: 'right',
+                      whiteSpace: 'nowrap'
+                    }),
+                    ...(block.outer_label_direction === 'right' && {
+                      left: block.x + block.width + offsetX + 8,
+                      top: block.y + offsetY + block.height / 2,
+                      transform: 'translateY(-50%)',
+                      textAlign: 'left',
+                      whiteSpace: 'nowrap'
+                    })
                   }}
                 >
                   {block.outer_label}
@@ -399,6 +430,7 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
                   height: block.height,
                   backgroundColor: block.color,
                   borderRadius: '8px',
+                  border: `${block.borderWidth ?? 2}px ${block.borderStyle ?? 'solid'} ${block.borderColor ?? 'rgba(0,0,0,0.1)'}`,
                   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                   zIndex: 10
                 }}
@@ -406,7 +438,14 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
                 onTouchStart={(e) => handleBlockClick(block, e)}
               >
                 <div className="flex items-center justify-center h-full p-4">
-                  <span className="text-white font-medium text-center text-sm">
+                  <span 
+                    className="font-medium text-center"
+                    style={{ 
+                      fontSize: block.fontSize ? `${block.fontSize * scale}px` : `${14 * scale}px`,
+                      color: block.titleColor || '#ffffff',
+                      lineHeight: '1.2'
+                    }}
+                  >
                     {block.inner_label}
                   </span>
                 </div>
