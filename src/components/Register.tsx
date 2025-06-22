@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { register, isLoading } = useAuth();
+  const { register, uploadProfile, isLoading } = useAuth();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -15,6 +15,9 @@ const Register = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string>('');
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,6 +38,59 @@ const Register = () => {
     if (apiError) {
       setApiError('');
     }
+  };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({
+          ...prev,
+          profileImage: 'Please select a valid image file'
+        }));
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({
+          ...prev,
+          profileImage: 'Image size must be less than 5MB'
+        }));
+        return;
+      }
+      
+      setProfileImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfileImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      // Clear any previous errors
+      if (errors.profileImage) {
+        setErrors(prev => ({
+          ...prev,
+          profileImage: ''
+        }));
+      }
+    }
+  };
+
+  const removeProfileImage = () => {
+    setProfileImage(null);
+    setProfileImagePreview('');
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const validateForm = () => {
@@ -82,6 +138,19 @@ const Register = () => {
     try {
       const { confirmPassword, ...registerData } = formData;
       await register(registerData);
+      
+      // Upload profile image if provided
+      if (profileImage) {
+        try {
+          await uploadProfile(profileImage);
+        } catch (profileError: any) {
+          console.error('Profile upload failed:', profileError);
+          // Don't fail the entire registration for profile upload failure
+          // Just show a warning that profile upload failed
+          setApiError(`Registration successful, but profile picture upload failed: ${profileError.message}`);
+        }
+      }
+      
       navigate('/'); // Redirect to home after successful registration
     } catch (error: any) {
       setApiError(error.message || 'Registration failed. Please try again.');
@@ -283,6 +352,75 @@ const Register = () => {
               {errors.confirmPassword && (
                 <p className="mt-1 text-xs text-red-400">{errors.confirmPassword}</p>
               )}
+            </div>
+
+            {/* Profile Image Upload */}
+            <div>
+              <label htmlFor="profileImage" className="block text-xs font-medium text-neutral-200 mb-1">
+                Profile Picture (Optional)
+              </label>
+              
+              {profileImagePreview ? (
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <img
+                      src={profileImagePreview}
+                      alt="Profile preview"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-neutral-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeProfileImage}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                      disabled={isLoading}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs text-neutral-300">{profileImage?.name}</p>
+                    <p className="text-xs text-neutral-500">
+                      {profileImage && (profileImage.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    id="profileImage"
+                    accept="image/*"
+                    onChange={handleProfileImageChange}
+                    className="hidden"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={triggerFileInput}
+                    disabled={isLoading}
+                    className={`w-full px-3 py-2 bg-neutral-800/50 backdrop-blur-sm border rounded-lg text-neutral-400 hover:bg-neutral-700/50 transition-colors text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      errors.profileImage 
+                        ? 'border-red-500' 
+                        : 'border-neutral-600/40'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span>Choose profile picture</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+              
+              {errors.profileImage && (
+                <p className="mt-1 text-xs text-red-400">{errors.profileImage}</p>
+              )}
+              <p className="mt-1 text-xs text-neutral-500">
+                Supported formats: JPG, PNG, GIF. Max size: 5MB
+              </p>
             </div>
 
             <button

@@ -1,3 +1,6 @@
+import React from 'react';
+import GuidanceAgents from './GuidanceAgents';
+
 const PersonalizedGuidance = () => {
   return (
     <div className="min-h-screen bg-black py-8 relative overflow-hidden">
@@ -61,19 +64,10 @@ const PersonalizedGuidance = () => {
         <div className="absolute w-full h-px bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan-reverse opacity-15" style={{ top: '60%' }}></div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 relative z-10">
-        <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md p-6 text-center border border-neutral-700/20">
-          <h1 className="text-4xl font-bold text-white mb-4">Personalized Guidance</h1>
-          <p className="text-neutral-300 text-lg mb-8">
-            Get personalized advice and mentorship for your career journey
-          </p>
-          <div className="text-white">
-            <p className="mb-4">🚧 This feature is coming soon!</p>
-            <p className="text-neutral-400">
-              We're developing AI-powered personalized guidance that will provide 
-              tailored advice based on your unique profile and goals.
-            </p>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        {/* Guidance Agents Section */}
+        <div className="bg-neutral-900/40 backdrop-blur-md rounded-lg shadow-md p-6 border border-neutral-700/20">
+          <GuidanceAgents />
         </div>
       </div>
     </div>

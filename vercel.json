@@ -7,7 +7,16 @@
     "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "NPM_CONFIG_FUND": "false",
-    "NPM_CONFIG_AUDIT": "false"
+    "NPM_CONFIG_AUDIT": "false",
+    "VITE_BACKEND_SERVER_IP": "3.7.151.6",
+    "VITE_BACKEND_SERVER_URL": "http://3.7.151.6/api/v1"
+  },
+  "functions": {
+    "src/api/proxy.js": {
+      "environment": {
+        "BACKEND_SERVER_IP": "3.7.151.6"
+      }
+    }
   },
   "rewrites": [
     {
