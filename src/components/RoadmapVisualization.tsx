@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { RoadmapBlock, RoadmapData } from '../types/roadmap';
+import type { RoadmapData } from '../types/roadmap';
 import type { ConnectionStyle } from '../types/roadmap';
 
 interface RoadmapVisualizationProps {

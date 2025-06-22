@@ -12,7 +12,6 @@ export interface ConnectionPanelProps {
 }
 
 const ConnectionPanel: React.FC<ConnectionPanelProps> = ({ 
-  connectionId, 
   fromBlockLabel, 
   toBlockLabel, 
   style, 

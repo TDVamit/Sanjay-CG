@@ -20,7 +20,8 @@ const RoadmapDetail = () => {
   const [editedTitle, setEditedTitle] = useState('');
   const [editedDescription, setEditedDescription] = useState('');
   const [saving, setSaving] = useState(false);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [, setSelectedCategoryIds] = useState<string[]>([]);
+  
   
   // Add edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -176,21 +177,7 @@ const RoadmapDetail = () => {
     }
   };
 
-  // Handle category updates
-  const handleCategoryToggle = (categoryId: string) => {
-    // Validate that categoryId is not undefined, null, or empty
-    if (!categoryId || categoryId === undefined || categoryId === null || categoryId === '') {
-      console.warn('Invalid category ID provided:', categoryId);
-      return;
-    }
-    
-    setSelectedCategoryIds(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
-
+ 
   // Handle category removal
   const handleCategoryRemove = async (categoryId: string) => {
     if (!roadmap) return;

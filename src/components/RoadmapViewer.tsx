@@ -210,7 +210,7 @@ const RoadmapViewer: React.FC<RoadmapViewerProps> = ({
             height={canvasHeight}
           >
             {roadmapData.blocks.map(block =>
-              Object.entries(block.connected_blocks).map(([targetId, direction]) => {
+              Object.entries(block.connected_blocks).map(([targetId]) => {
                 const targetBlock = roadmapData.blocks.find(b => b.block_id === targetId);
                 if (!targetBlock) return null;
 

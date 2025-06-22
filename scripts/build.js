@@ -5,7 +5,6 @@ import { existsSync } from 'fs';
 
 function runCommand(command, options = {}) {
   try {
-    console.log(`Running: ${command}`);
     execSync(command, { stdio: 'inherit', ...options });
     return true;
   } catch (error) {
@@ -16,16 +15,13 @@ function runCommand(command, options = {}) {
 }
 
 try {
-  console.log('🚀 Starting build process...');
   
   // Check environment
   const isCI = process.env.CI || process.env.VERCEL || process.env.GITHUB_ACTIONS;
   const isVercel = process.env.VERCEL;
   
-  console.log(`Environment: ${isCI ? 'CI' : 'Local'} ${isVercel ? '(Vercel)' : ''}`);
   
   if (isCI) {
-    console.log('🔧 CI environment detected, handling Rollup dependencies...');
     
     // Try to install the specific Rollup native dependency
     const rollupInstallSuccess = runCommand(

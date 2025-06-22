@@ -23,7 +23,6 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
   onSave, 
   readOnly = false,
   roadmapId,
-  authToken,
   name = '',
   description = '',
   categoryIds = []
@@ -78,9 +77,8 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
   });
 
   // --- Undo/Redo State ---
-  const [history, setHistory] = useState<RoadmapData[]>([]);
-  const [future, setFuture] = useState<RoadmapData[]>([]);
-  const preOpRef = useRef<RoadmapData | null>(null);
+  const [, setHistory] = useState<RoadmapData[]>([]);
+  const [, setFuture] = useState<RoadmapData[]>([]);
 
   const pushHistory = useCallback((snapshot: RoadmapData) => {
     setHistory(prev => [...prev, JSON.parse(JSON.stringify(snapshot))]);
@@ -466,8 +464,6 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
   // Handle mouse up
   const handleMouseUp = useCallback((event: MouseEvent) => {
     const wasActuallyDragging = dragState.isDragging;
-    const wasActuallyResizing = dragState.isResizing;
-    const wasActuallyCreating = dragState.isCreating;
     
     // Apply snap-to-grid only when movement is complete
     if (dragState.isDragging && selectedBlock) {
@@ -1131,7 +1127,7 @@ const RoadmapBuilder: React.FC<RoadmapBuilderProps> = ({
   }, [setRoadmapData, scale]);
 
   // Canvas click to deselect
-  const handleContainerClick = React.useCallback((event: React.MouseEvent) => {
+  const handleContainerClick = React.useCallback((_event: React.MouseEvent) => {
     setSelectedBlocks([]);
     setSelectedConnections([]);
     setShowRightPanel(false);

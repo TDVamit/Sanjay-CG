@@ -1,4 +1,3 @@
-import React from 'react';
 import GuidanceAgents from './GuidanceAgents';
 
 const PersonalizedGuidance = () => {

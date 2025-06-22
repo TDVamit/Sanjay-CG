@@ -53,9 +53,6 @@ const GuidanceAgents: React.FC = () => {
     return category._id || category.id;
   };
 
-  const extractCategoryIds = (categories: any[]): string[] => {
-    return categories?.map(cat => getCategoryId(cat)).filter((id): id is string => id !== undefined && id !== null && id !== '') || [];
-  };
 
   // Load agents
   const loadAgents = async (page: number = 1, search?: string, categoryId?: string) => {
