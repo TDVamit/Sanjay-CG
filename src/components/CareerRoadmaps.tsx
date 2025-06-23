@@ -573,9 +573,6 @@ const CareerRoadmaps = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-8 bg-blue-500 rounded-full"></div>
                       <h2 className="text-xl sm:text-2xl font-bold text-white">Skill-Based Roadmaps</h2>
-                      <span className="px-2 sm:px-3 py-1 bg-blue-500/20 border border-blue-400/30 text-blue-300 rounded-full text-xs sm:text-sm">
-                        {skillBasedRoadmaps.length} roadmaps
-                      </span>
                     </div>
                   </div>
                   
@@ -683,9 +680,6 @@ const CareerRoadmaps = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-3 h-8 bg-purple-500 rounded-full"></div>
                       <h2 className="text-xl sm:text-2xl font-bold text-white">Role-Based Roadmaps</h2>
-                      <span className="px-2 sm:px-3 py-1 bg-purple-500/20 border border-purple-400/30 text-purple-300 rounded-full text-xs sm:text-sm">
-                        {roleBasedRoadmaps.length} roadmaps
-                      </span>
                     </div>
                   </div>
                   
