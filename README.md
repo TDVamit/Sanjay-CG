@@ -1,171 +1,118 @@
-# Sanjay - Career Guidance
+# Sanjay Career Guidance — frontend
 
-A Computer Science Career Counseling application built with React, TypeScript, and Tailwind CSS. The app provides personalized career guidance through an interactive questionnaire and AI-powered recommendations with PDF career guides.
+Sanjay is an AI career-guide application that turns a computer-science student’s interests, skills, experience, and goals into explainable career-roadmap recommendations and practical next steps.
 
-## 🚀 Features
+This repository contains the authenticated React frontend. The companion API is maintained in [TDVamit/sanjay-cg-backend](https://github.com/TDVamit/sanjay-cg-backend).
 
-- **Interactive Questionnaire**: 30 questions across 6 categories
-- **AI-Powered Recommendations**: OpenAI integration for personalized career guidance
-- **PDF Career Guides**: Comprehensive career roadmaps for different CS specializations
-- **Modern UI**: Black theme with neon cyan/purple effects
-- **Responsive Design**: Works on desktop and mobile devices
-- **Form Validation**: Real-time validation with error handling
+## What the product does
 
-## 🛠️ Tech Stack
+- Guides a signed-in user through a required 30-question assessment across six areas: interests, goals, academics and skills, practical exposure, future planning, and industry awareness.
+- Loads available roadmaps from the API, sends the completed assessment plus roadmap catalog to the backend AI chat endpoint, and renders four recommendations.
+- Uses returned roadmap IDs to open matching roadmap detail pages; recommendations are constrained client-side to IDs returned by the API.
+- Accepts a resume PDF and displays the backend’s ATS-oriented category scores and comments.
+- Browses, filters, creates, edits, and deletes career roadmaps, categories, and guidance agents through authenticated API calls.
+- Provides an AI career assistant that answers questions and suggests in-app destinations such as assessment, resume analysis, roadmaps, and personalized guidance.
+- Includes built-in career-guide PDFs for common paths including frontend, backend, full-stack, AI engineering, data analysis, DevOps, cybersecurity, mobile, product, and UX roles.
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4
-- **Build Tool**: Vite 6
-- **PDF Viewer**: @react-pdf-viewer
-- **AI Integration**: OpenAI GPT-4o
-- **Deployment**: Vercel with GitHub Actions CI/CD
+## User flow
 
-## 📦 Installation
+1. Register or sign in.
+2. Start the six-step assessment; each step validates that all five questions are answered.
+3. Review four AI-selected roadmaps, then open a roadmap for its full content.
+4. Optionally analyze a resume, browse maintained roadmaps, or ask the assistant where to go next.
+
+All primary routes are protected by `ProtectedRoute`. Access and refresh tokens are stored in browser `localStorage`; the API client refreshes access tokens proactively and retries once after a 401 response.
+
+## Architecture
+
+```text
+React/Vite browser app
+  ├─ AuthContext + ProtectedRoute + token refresh
+  ├─ Assessment, resume analyzer, roadmaps, guidance agents, AI chat
+  ├─ Static career-guide PDFs in public/pdfs/
+  └─ Axios service layer
+       │  /api/v1/* with Bearer tokens
+       ▼
+FastAPI backend (TDVamit/sanjay-cg-backend)
+  ├─ JWT auth and user/profile APIs
+  ├─ MongoDB persistence
+  ├─ OpenAI chat and resume ATS analysis
+  └─ PDF processing and roadmap/category/guidance-agent APIs
+```
+
+The frontend owns routing, form state, token handling, result validation, and presentation. The backend owns authentication, persistence, PDF conversion, AI calls, and business APIs. The assessment prompt is assembled in `src/components/CareerAssessment.tsx`; the AI response is expected to contain four roadmap objects with exact IDs from the catalog.
+
+## Tech stack
+
+- React 19, TypeScript, React Router 7
+- Vite 6, Tailwind CSS 3, PostCSS
+- Axios for API access
+- `@react-pdf-viewer/*` and `pdfjs-dist` for PDF viewing
+- TipTap for rich text editing
+- Vercel configuration with a Vite build and `/api/*` rewrite
+
+## Local setup
+
+Requirements: Node.js 18+ and npm 8+.
 
 ```bash
-# Clone the repository
 git clone https://github.com/TDVamit/Sanjay-CG.git
-cd Sanjay-CG/sanjay-cg
-
-# Install dependencies
-npm install --legacy-peer-deps
-
-# Start development server
+cd Sanjay-CG
+npm install
 npm run dev
 ```
 
-## 🔧 Build Scripts
+The repository does not include an `.env.example`. For local development, create `.env` with the URL of a running backend:
 
-- `npm run dev` - Start development server
-- `npm run build` - Build using custom script (recommended)
-- `npm run build:original` - Standard TypeScript + Vite build
-- `npm run build:fallback` - Fallback build for CI/CD environments
-- `npm run preview` - Preview production build locally
-
-## 🚀 Deployment
-
-### Vercel Deployment
-
-The project is configured for automatic deployment to Vercel with the following setup:
-
-#### 1. Vercel Configuration (`vercel.json`)
-```json
-{
-  "framework": "vite",
-  "buildCommand": "npm run build:fallback",
-  "outputDirectory": "dist",
-  "installCommand": "npm install --legacy-peer-deps"
-}
+```env
+VITE_BACKEND_SERVER_URL=http://127.0.0.1:8000/api/v1
 ```
 
-#### 2. GitHub Actions CI/CD (`.github/workflows/deploy.yml`)
-- Automatic deployment on push to `main` branch
-- Handles Rollup dependency issues
-- Uses Node.js 18 with npm caching
+Start the backend separately, then open the Vite URL printed by `npm run dev`. Do not place API keys, database URLs, JWT secrets, or bearer tokens in this repository or in `VITE_*` variables; Vite exposes `VITE_*` values to the browser.
 
-#### 3. Environment Variables
-Set these in your Vercel dashboard:
-- `VERCEL_TOKEN` - Your Vercel API token
-- `ORG_ID` - Your Vercel organization ID
-- `PROJECT_ID` - Your Vercel project ID
+## Commands
 
-### Manual Deployment
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Type-check and build the production bundle |
+| `npm run build:original` | Standard TypeScript + Vite build |
+| `npm run build:fallback` | Build with the Rollup fallback used by Vercel |
+| `npm run lint` | Run ESLint |
+| `npm run preview` | Preview the built bundle locally |
+| `npm run deploy` | Build and invoke `vercel --prod` |
 
-```bash
-# Build the project
-npm run build
+## Configuration and deployment
 
-# Deploy to Vercel (requires Vercel CLI)
-npm run deploy
+- Development uses `VITE_BACKEND_SERVER_URL`, with a legacy hardcoded fallback in `src/services/api.ts`.
+- Production uses `/api/v1`, relying on the checked-in Vercel rewrite configuration.
+
+`vercel.json` is configured for a Vite build and includes a rewrite to a backend host. Treat that host as deployment-specific infrastructure: verify it is reachable over HTTPS and update it through deployment configuration before publishing. No public live-demo URL is verified in this repository, so none is advertised here.
+
+For production, configure frontend and backend origins explicitly, use HTTPS, and keep secrets only in deployment-provider secret/environment settings. A browser-exposed frontend variable must contain only a public API origin or path.
+
+## Project layout
+
+```text
+src/
+  components/       UI screens and feature components
+  contexts/         authentication context
+  services/api.ts   typed Axios API client and token lifecycle
+  utils/            roadmap templates and helpers
+public/pdfs/        bundled career-guide PDFs
+scripts/            build helpers
+vercel.json         Vercel build and rewrite configuration
 ```
 
-## 🔧 Configuration Files
+## Current status and limitations
 
-### Key Configuration Files:
-- `.npmrc` - npm configuration with legacy peer deps
-- `vite.config.ts` - Vite build configuration
-- `vercel.json` - Vercel deployment settings
-- `package.json` - Dependencies and build scripts
+- Active prototype/portfolio application rather than a formally versioned release.
+- AI recommendations depend on a configured backend, OpenAI availability, and a populated roadmap catalog.
+- The assessment prompt asks the model for JSON and validates roadmap IDs, but has no deterministic ranking or offline fallback.
+- No automated frontend test suite is present; verify changes with `npm run lint` and `npm run build`.
+- The legacy API fallback and current Vercel rewrite should be replaced with an environment-managed HTTPS backend URL before production use.
 
-### Rollup Issue Resolution:
-The project includes multiple strategies to handle Rollup dependency issues on different platforms:
+## Links
 
-1. **Custom Build Script** (`scripts/build.js`) - Handles CI environments
-2. **Fallback Build** - Cross-platform compatible build command
-3. **Dependency Resolutions** - Forces specific Rollup versions
-4. **Environment Variables** - Configures npm behavior
-
-## 📁 Project Structure
-
-```
-sanjay-cg/
-├── public/
-│   ├── main-logo.png
-│   └── pdfs/              # Career guide PDFs
-├── src/
-│   ├── components/
-│   │   └── PDFViewer.tsx
-│   ├── assets/
-│   └── App.tsx
-├── scripts/
-│   └── build.js           # Custom build script
-├── .github/
-│   └── workflows/
-│       └── deploy.yml     # GitHub Actions workflow
-├── vercel.json            # Vercel configuration
-├── vite.config.ts         # Vite configuration
-└── package.json
-```
-
-## 🎨 UI Theme
-
-- **Background**: Black (`bg-black`)
-- **Cards**: Dark gray (`bg-gray-900`) with cyan neon shadows
-- **Accent Colors**: Cyan (`#06b6d4`), Purple (`#8b5cf6`), Pink (`#ec4899`)
-- **Typography**: White text with gray accents
-- **Effects**: Neon glow shadows and gradient backgrounds
-
-## 📋 Career Paths Supported
-
-The application provides PDF guides for 21 different career paths:
-- AI Engineer, Data Scientist, MLOps
-- Frontend, Backend, Full-Stack Development
-- Mobile Development (Android, iOS)
-- DevOps, Cybersecurity, Blockchain
-- Game Development, UX Design
-- Product Management, Technical Writing
-- And more...
-
-## 🔍 Troubleshooting
-
-### Common Issues:
-
-1. **Rollup Build Errors on Vercel**
-   - Solution: Use `npm run build:fallback` command
-   - The project includes multiple fallback strategies
-
-2. **PDF Viewer Not Loading**
-   - Ensure PDFs are in the `public/pdfs/` directory
-   - Check job name mapping in `App.tsx`
-
-3. **TypeScript Compilation Errors**
-   - Run `npx tsc --noEmit` to check for errors
-   - Ensure all dependencies are properly installed
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test the build process
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-## 🔗 Links
-
-- [Live Demo](https://your-vercel-url.vercel.app)
-- [GitHub Repository](https://github.com/TDVamit/Sanjay-CG)
-- [Vercel Dashboard](https://vercel.com/dashboard)
-
+- [Frontend repository](https://github.com/TDVamit/Sanjay-CG)
+- [Backend repository](https://github.com/TDVamit/sanjay-cg-backend)
